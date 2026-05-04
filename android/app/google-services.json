@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "346583132476",
+    "project_id": "amedsporapp",
+    "storage_bucket": "amedsporapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:346583132476:android:d7efb223a146adc4e41639",
+        "android_client_info": {
+          "package_name": "com.example.amedspor_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhDp4hauleQAPk_O9uxM8NJHvnN0IKv5A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

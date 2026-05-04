@@ -1,0 +1,136 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function validUserRole() {
+      return request.resource.data.role in ['admin', 'user'];
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+
+      allow create: if isOwner(userId)
+        && request.resource.data.role == 'user';
+
+      allow update: if (
+        isOwner(userId)
+        && request.resource.data.role == resource.data.role
+      ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /lineups/{lineupId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if (
+        signedIn()
+        && resource.data.userId == request.auth.uid
+      ) || isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if (
+        signedIn()
+        && resource.data.userId == request.auth.uid
+      ) || isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid;
+
+        allow update, delete: if (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+        ) || isAdmin();
+      }
+    }
+
+    match /predictions/{predictionId} {
+      allow read: if (
+        signedIn()
+        && resource.data.userId == request.auth.uid
+      ) || isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if true;
+
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid;
+
+        allow update, delete: if (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+        ) || isAdmin();
+      }
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.reporterId == request.auth.uid;
+
+      allow read: if (
+        signedIn()
+        && resource.data.reporterId == request.auth.uid
+      ) || isAdmin();
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if (
+        signedIn()
+        && resource.data.userId == request.auth.uid
+      ) || isAdmin();
+
+      allow create: if signedIn();
+
+      allow update: if (
+        signedIn()
+        && resource.data.userId == request.auth.uid
+      ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+  }
+}

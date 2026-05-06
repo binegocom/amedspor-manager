@@ -141,7 +141,7 @@ class _MatchListItem extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _TeamMini(name: match.homeTeam),
+              _TeamMini(name: match.homeTeam, logo: match.homeLogo),
               Column(
                 children: [
                   if (isLive || isFinished)
@@ -153,16 +153,16 @@ class _MatchListItem extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.primaryRed, borderRadius: BorderRadius.circular(4)),
-                      child: Text('${match.minute}\'', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      child: Text('${match.minute}\'', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
                     )
                   else
                     Text(
-                      isFinished ? 'MAÇ SONUCU' : '19:00',
+                      isFinished ? 'MAÇ SONUCU' : '${match.matchDate.hour.toString().padLeft(2, '0')}:${match.matchDate.minute.toString().padLeft(2, '0')}',
                       style: AppTextStyles.label.copyWith(fontSize: 10),
                     ),
                 ],
               ),
-              _TeamMini(name: match.awayTeam),
+              _TeamMini(name: match.awayTeam, logo: match.awayLogo),
             ],
           ),
           if (!isFinished) ...[
@@ -195,8 +195,9 @@ class _MatchListItem extends StatelessWidget {
 
 class _TeamMini extends StatelessWidget {
   final String name;
+  final String? logo;
 
-  const _TeamMini({required this.name});
+  const _TeamMini({required this.name, this.logo});
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +207,12 @@ class _TeamMini extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-          child: const Center(child: Icon(Icons.shield, color: AppColors.muted, size: 24)),
+          child: logo != null && logo!.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(logo!, fit: BoxFit.contain),
+                )
+              : const Center(child: Icon(Icons.shield, color: AppColors.muted, size: 24)),
         ),
         const SizedBox(height: 6),
         Text(name, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),

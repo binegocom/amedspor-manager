@@ -3,9 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/post_model.dart';
 import '../models/comment_model.dart';
 import '../services/firebase/firebase_providers.dart';
+import '../../core/utils/bad_words_filter.dart';
 
 class PostRepository {
   Future<void> createPost(PostModel post) async {
+    if (BadWordsFilter.containsBadWords(post.title) || BadWordsFilter.containsBadWords(post.content)) {
+      throw Exception('İçeriğiniz topluluk kurallarına aykırı kelimeler içeriyor.');
+    }
     await firestoreService.posts.doc(post.id).set(post.toMap());
   }
 
@@ -58,6 +62,10 @@ class PostRepository {
     required String postId,
     required CommentModel comment,
   }) async {
+    if (BadWordsFilter.containsBadWords(comment.text)) {
+      throw Exception('Yorumunuz topluluk kurallarına aykırı kelimeler içeriyor.');
+    }
+
     final postRef = firestoreService.posts.doc(postId);
     final commentRef = firestoreService.comments(postId).doc(comment.id);
 

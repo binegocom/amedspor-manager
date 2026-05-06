@@ -9,7 +9,7 @@ import '../../../../shared/components/app_text_field.dart';
 import '../../../../data/models/match_model.dart';
 import '../../../../data/models/match_event_model.dart';
 import '../../../../data/repositories/match_repository.dart';
-import '../../widgets/admin_layout.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminLiveMatchScreen extends StatefulWidget {
   final String matchId;
@@ -46,13 +46,14 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
       minute: int.tryParse(minuteContr.text) ?? 0,
       status: selectedStatus,
     );
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.primaryGreen,
           content: Text('Bilgiler güncellendi.'),
         ),
       );
+    }
   }
 
   Future<void> _addEventDialog() async {
@@ -172,46 +173,33 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AdminLayout(
-      activeRoute: AdminLiveMatchScreen.routePath,
-      child: StreamBuilder<MatchModel?>(
-        stream: matchRepository.watchMatch(widget.matchId),
-        builder: (context, snapshot) {
-          final match = snapshot.data;
-          if (match == null)
-            return const Center(
+    return StreamBuilder<MatchModel?>(
+      stream: matchRepository.watchMatch(widget.matchId),
+      builder: (context, snapshot) {
+        final match = snapshot.data;
+        if (match == null) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0E0E0E),
+            body: Center(
               child: CircularProgressIndicator(color: AppColors.primaryRed),
-            );
+            ),
+          );
+        }
 
-          if (homeScoreContr.text.isEmpty) {
-            homeScoreContr.text = match.homeScore.toString();
-            awayScoreContr.text = match.awayScore.toString();
-            minuteContr.text = match.minute.toString();
-            selectedStatus = match.status;
-          }
+        if (homeScoreContr.text.isEmpty) {
+          homeScoreContr.text = match.homeScore.toString();
+          awayScoreContr.text = match.awayScore.toString();
+          minuteContr.text = match.minute.toString();
+          selectedStatus = match.status;
+        }
 
-          return ListView(
-            padding: const EdgeInsets.all(32),
+        return AdminLayout(
+          activeRoute: AdminLiveMatchScreen.routePath,
+          title: 'Canlı Kontrol Merkezi',
+          subtitle: '${match.homeTeam} vs ${match.awayTeam}',
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Canlı Kontrol Merkezi',
-                        style: AppTextStyles.h1,
-                      ),
-                      Text(
-                        '${match.homeTeam} vs ${match.awayTeam}',
-                        style: AppTextStyles.body,
-                      ),
-                    ],
-                  ),
-                  _StatusChip(status: selectedStatus),
-                ],
-              ),
               const SizedBox(height: 40),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +218,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                                 children: [
                                   Expanded(
                                     child: AppTextField(
-                                      label: 'Ev Sahibi',
+                                      label: 'Ev Sahibi Skor',
                                       controller: homeScoreContr,
                                       keyboardType: TextInputType.number,
                                     ),
@@ -238,44 +226,37 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                                   const SizedBox(width: 24),
                                   Expanded(
                                     child: AppTextField(
-                                      label: 'Deplasman',
+                                      label: 'Deplasman Skor',
                                       controller: awayScoreContr,
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 24),
-                                  Expanded(
-                                    child: AppTextField(
-                                      label: 'Dakika',
-                                      controller: minuteContr,
                                       keyboardType: TextInputType.number,
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 24),
+                              AppTextField(
+                                label: 'Dakika',
+                                controller: minuteContr,
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: 24),
+                              const Text('Durum', style: AppTextStyles.label),
+                              const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
-                                initialValue: selectedStatus,
-                                dropdownColor: AppColors.surface,
+                                value: selectedStatus,
+                                dropdownColor: const Color(0xFF1A1A1A),
                                 style: const TextStyle(color: Colors.white),
                                 decoration: const InputDecoration(
-                                  labelText: 'Maç Durumu',
-                                  labelStyle: TextStyle(color: AppColors.muted),
+                                  contentPadding: EdgeInsets.all(18),
                                 ),
-                                items:
-                                    [
-                                      'upcoming',
-                                      'live',
-                                      'halftime',
-                                      'finished',
-                                    ].map((s) {
-                                      return DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s.toUpperCase()),
-                                      );
-                                    }).toList(),
-                                onChanged: (val) =>
-                                    setState(() => selectedStatus = val!),
+                                items: const [
+                                  DropdownMenuItem(value: 'upcoming', child: Text('Başlamadı')),
+                                  DropdownMenuItem(value: 'live', child: Text('Canlı')),
+                                  DropdownMenuItem(value: 'finished', child: Text('Bitti')),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) setState(() => selectedStatus = val);
+                                },
                               ),
                               const SizedBox(height: 32),
                               AppButton(
@@ -291,8 +272,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'Maçın Adamı Oylaması',

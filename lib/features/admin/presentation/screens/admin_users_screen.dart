@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../data/models/app_user_model.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -104,169 +105,80 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kIsWeb) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0E0E0E),
-        body: Center(
-          child: Text(
-            'Admin panel sadece web üzerinde kullanılabilir.',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
-
-    return FutureBuilder<bool>(
-      future: _isAdmin(),
-      builder: (context, adminSnapshot) {
-        if (adminSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0E0E0E),
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFFE53935)),
-            ),
-          );
-        }
-
-        if (adminSnapshot.data != true) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0E0E0E),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Admin girişi yap'),
-              ),
-            ),
-          );
-        }
-
-        return Scaffold(
-          backgroundColor: const Color(0xFF0E0E0E),
-          body: Row(
-            children: [
-              const _AdminSidebar(),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Kullanıcı Yönetimi',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Kullanıcıları görüntüle, rol değiştir ve hesap durumunu yönet.',
-                        style: TextStyle(
-                          color: Color(0xFFB3B3B3),
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: 520,
-                        child: TextField(
-                          style: const TextStyle(color: Colors.white),
-                          cursorColor: const Color(0xFFE53935),
-                          onChanged: (value) {
-                            setState(() => searchQuery = value);
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'Kullanıcı adı, email veya rol ara...',
-                            hintStyle: const TextStyle(
-                              color: Color(0xFF777777),
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.search_rounded,
-                              color: Color(0xFF0F6A3D),
-                            ),
-                            filled: true,
-                            fillColor: const Color(0xFF1A1A1A),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide:
-                                  const BorderSide(color: Colors.white10),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE53935),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Expanded(
-                        child: StreamBuilder<List<AppUserModel>>(
-                          stream: userRepository.watchLeaderboard(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFFE53935),
-                                ),
-                              );
-                            }
-
-                            final users = _filterUsers(snapshot.data ?? []);
-
-                            if (users.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'Kullanıcı bulunamadı.',
-                                  style: TextStyle(
-                                    color: Color(0xFFB3B3B3),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return ListView.separated(
-                              itemCount: users.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final user = users[index];
-
-                                return _UserCard(
-                                  user: user,
-                                  onRoleChanged: (role) {
-                                    _updateRole(
-                                      user: user,
-                                      role: role,
-                                    );
-                                  },
-                                  onToggleDisabled: () {
-                                    _toggleUserDisabled(user);
-                                  },
-                                  onOpenProfile: () {
-                                    context.go('/profile/${user.id}');
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+    return AdminLayout(
+      activeRoute: AdminUsersScreen.routePath,
+      title: 'Kullanıcı Yönetimi',
+      subtitle: 'Kullanıcıları görüntüle, rol değiştir ve hesap durumunu yönet.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: SizedBox(
+              width: 520,
+              child: TextField(
+                style: const TextStyle(color: Colors.white),
+                cursorColor: const Color(0xFFE53935),
+                onChanged: (value) {
+                  setState(() => searchQuery = value);
+                },
+                decoration: InputDecoration(
+                  hintText: 'Kullanıcı adı, email veya rol ara...',
+                  hintStyle: const TextStyle(color: Color(0xFF777777)),
+                  prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF0F6A3D)),
+                  filled: true,
+                  fillColor: const Color(0xFF1A1A1A),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Colors.white10),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFE53935)),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 24),
+          Expanded(
+            child: StreamBuilder<List<AppUserModel>>(
+              stream: userRepository.watchLeaderboard(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFFE53935)));
+                }
+
+                final users = _filterUsers(snapshot.data ?? []);
+
+                if (users.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Kullanıcı bulunamadı.',
+                      style: TextStyle(color: Color(0xFFB3B3B3), fontWeight: FontWeight.w600),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  itemCount: users.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return _UserCard(
+                      user: user,
+                      onRoleChanged: (role) => _updateRole(user: user, role: role),
+                      onToggleDisabled: () => _toggleUserDisabled(user),
+                      onOpenProfile: () => context.go('/profile/${user.id}'),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -470,131 +382,4 @@ class _MiniBadge extends StatelessWidget {
     );
   }
 }
-
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            active: true,
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
+

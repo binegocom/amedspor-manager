@@ -6,8 +6,10 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/premium_header.dart';
+import '../../../../shared/components/login_required_modal.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
+import '../../../../data/services/firebase/firebase_providers.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -31,7 +33,12 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _createPost() {
-    context.go('/create-post');
+    final user = authService.currentUser;
+    if (user == null) {
+      showLoginRequiredModal(context);
+      return;
+    }
+    context.push('/create-post');
   }
 
   @override
@@ -187,6 +194,19 @@ class _PostCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppColors.muted, height: 1.5, fontSize: 14),
           ),
+          if (post.imageUrl != null) ...[
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                post.imageUrl!,
+                width: double.infinity,
+                height: 160,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             children: [

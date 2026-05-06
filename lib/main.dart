@@ -1,15 +1,26 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'data/services/firebase/firebase_providers.dart';
+import 'core/guards/global_app_guard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   await authService.initPersistence();
   await pushNavigationService.init();
@@ -60,6 +71,7 @@ class AmedsporAppController extends State<AmedsporApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) => GlobalAppGuard(child: child!),
     );
   }
 }

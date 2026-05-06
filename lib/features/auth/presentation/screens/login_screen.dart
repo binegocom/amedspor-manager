@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isRegisterMode = false;
   bool obscurePassword = true;
   bool isSubmitting = false;
+  bool _kvkkAccepted = false;
 
   @override
   void dispose() {
@@ -43,6 +44,16 @@ class _LoginScreenState extends State<LoginScreen> {
         const SnackBar(
           backgroundColor: AppColors.errorRed,
           content: Text('Email ve şifre alanları boş olamaz.'),
+        ),
+      );
+      return;
+    }
+
+    if (isRegisterMode && !_kvkkAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.errorRed,
+          content: Text('Kayıt olmak için sözleşmeleri kabul etmelisiniz.'),
         ),
       );
       return;
@@ -235,12 +246,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
 
-              const SizedBox(height: 16),
+              if (isRegisterMode) ...[
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: _kvkkAccepted,
+                        activeColor: AppColors.primaryRed,
+                        side: const BorderSide(color: AppColors.muted),
+                        onChanged: (v) {
+                          setState(() => _kvkkAccepted = v ?? false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _kvkkAccepted = !_kvkkAccepted);
+                        },
+                        child: const Text(
+                          'Kullanıcı sözleşmesini ve gizlilik politikasını okudum, kabul ediyorum.',
+                          style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                const SizedBox(height: 16),
+              ],
 
               AppButton(
                 text: isRegisterMode ? 'KAYIT OL' : 'GİRİŞ YAP',
                 isLoading: isSubmitting,
-                onTap: _submit,
+                onTap: (isRegisterMode && !_kvkkAccepted) ? null : _submit,
               ),
 
               const SizedBox(height: 26),

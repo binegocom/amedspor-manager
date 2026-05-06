@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../main.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,17 +20,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool chatNotifications = true;
   bool likeNotifications = true;
   bool darkMode = true;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadThemeMode();
+    _loadSettings();
   }
 
-  Future<void> _loadThemeMode() async {
-    final value = await appStateService.isDarkMode();
-    if (!mounted) return;
-    setState(() => darkMode = value);
+  Future<void> _loadSettings() async {
+    setState(() => isLoading = true);
+    final user = authService.currentUser;
+    final themeMode = await appStateService.isDarkMode();
+    
+    if (user != null) {
+      final userData = await userRepository.getUser(user.uid);
+      if (userData != null) {
+        setState(() {
+          matchNotifications = userData.notificationPrefs['match'] ?? true;
+          chatNotifications = userData.notificationPrefs['chat'] ?? true;
+          likeNotifications = userData.notificationPrefs['like'] ?? true;
+          darkMode = themeMode;
+          isLoading = false;
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      darkMode = themeMode;
+      isLoading = false;
+    });
+  }
+
+  Future<void> _updatePrefs() async {
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    await userRepository.updateNotificationPrefs(user.uid, {
+      'match': matchNotifications,
+      'chat': chatNotifications,
+      'like': likeNotifications,
+    });
   }
 
   void _logout() {
@@ -177,140 +211,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(onBack: () => context.go('/profile')),
-
-              const SizedBox(height: 24),
-
-              const _SectionTitle(title: 'Hesap'),
-
-              const SizedBox(height: 12),
-
-              _SettingsTile(
-                icon: Icons.person_rounded,
-                title: 'Profili Düzenle',
-                subtitle: 'Kullanıcı adı, şehir ve profil bilgileri',
-                onTap: () => context.go('/profile-setup'),
-              ),
-              _SettingsTile(
-                icon: Icons.lock_rounded,
-                title: 'Şifre Değiştir',
-                subtitle: 'Hesap güvenliğini güncelle',
-                onTap: _sendPasswordReset,
-              ),
-
-              const SizedBox(height: 22),
-
-              const _SectionTitle(title: 'Bildirimler'),
-
-              const SizedBox(height: 12),
-
-              _SwitchTile(
-                icon: Icons.sports_soccer_rounded,
-                title: 'Maç Bildirimleri',
-                subtitle: 'Maç başlangıcı ve önemli anlar',
-                value: matchNotifications,
-                onChanged: (value) {
-                  setState(() => matchNotifications = value);
-                },
-              ),
-              _SwitchTile(
-                icon: Icons.forum_rounded,
-                title: 'Sohbet Bildirimleri',
-                subtitle: 'Yeni mesaj ve oda aktiviteleri',
-                value: chatNotifications,
-                onChanged: (value) {
-                  setState(() => chatNotifications = value);
-                },
-              ),
-              _SwitchTile(
-                icon: Icons.thumb_up_rounded,
-                title: 'Beğeni Bildirimleri',
-                subtitle: 'Kadro ve yorum beğenileri',
-                value: likeNotifications,
-                onChanged: (value) {
-                  setState(() => likeNotifications = value);
-                },
-              ),
-
-              const SizedBox(height: 22),
-
-              const _SectionTitle(title: 'Uygulama'),
-
-              const SizedBox(height: 12),
-
-              _SwitchTile(
-                icon: Icons.dark_mode_rounded,
-                title: 'Koyu Tema',
-                subtitle: 'Amedspor koyu tema deneyimi',
-                value: darkMode,
-                onChanged: (value) {
-                  setState(() => darkMode = value);
-                  AmedsporApp.of(context).setDarkMode(value);
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.language_rounded,
-                title: 'Dil',
-                subtitle: 'Türkçe',
-                onTap: _showLanguageDialog,
-              ),
-              _SettingsTile(
-                icon: Icons.info_rounded,
-                title: 'Hakkında',
-                subtitle: 'Uygulama bilgileri ve sürüm',
-                onTap: () => context.go('/about'),
-              ),
-
-              const SizedBox(height: 22),
-
-              const _SectionTitle(title: 'Güvenlik'),
-
-              const SizedBox(height: 12),
-
-              _SettingsTile(
-                icon: Icons.report_rounded,
-                title: 'Raporlarım',
-                subtitle: 'Gönderdiğin şikayetleri görüntüle',
-                onTap: () => context.go('/reports'),
-              ),
-              _SettingsTile(
-                icon: Icons.privacy_tip_rounded,
-                title: 'Gizlilik ve Kullanım Şartları',
-                subtitle: 'Platform kuralları',
-                onTap: () => context.go('/policy'),
-              ),
-
-              const SizedBox(height: 28),
-
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: OutlinedButton.icon(
-                  onPressed: _logout,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFE53935),
-                    side: const BorderSide(color: Color(0xFFE53935)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryRed))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Header(onBack: () => context.go('/profile')),
+                    const SizedBox(height: 24),
+                    const _SectionTitle(title: 'Hesap'),
+                    const SizedBox(height: 12),
+                    _SettingsTile(
+                      icon: Icons.person_rounded,
+                      title: 'Profili Düzenle',
+                      subtitle: 'Kullanıcı adı, şehir ve profil bilgileri',
+                      onTap: () => context.go('/profile-setup'),
                     ),
-                  ),
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text(
-                    'Çıkış Yap',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
+                    _SettingsTile(
+                      icon: Icons.lock_rounded,
+                      title: 'Şifre Değiştir',
+                      subtitle: 'Hesap güvenliğini güncelle',
+                      onTap: _sendPasswordReset,
+                    ),
+                    const SizedBox(height: 22),
+                    const _SectionTitle(title: 'Bildirimler'),
+                    const SizedBox(height: 12),
+                    _SwitchTile(
+                      icon: Icons.sports_soccer_rounded,
+                      title: 'Maç Bildirimleri',
+                      subtitle: 'Maç başlangıcı ve önemli anlar',
+                      value: matchNotifications,
+                      onChanged: (value) {
+                        setState(() => matchNotifications = value);
+                        _updatePrefs();
+                      },
+                    ),
+                    _SwitchTile(
+                      icon: Icons.forum_rounded,
+                      title: 'Sohbet Bildirimleri',
+                      subtitle: 'Yeni mesaj ve oda aktiviteleri',
+                      value: chatNotifications,
+                      onChanged: (value) {
+                        setState(() => chatNotifications = value);
+                        _updatePrefs();
+                      },
+                    ),
+                    _SwitchTile(
+                      icon: Icons.thumb_up_rounded,
+                      title: 'Beğeni Bildirimleri',
+                      subtitle: 'Kadro ve yorum beğenileri',
+                      value: likeNotifications,
+                      onChanged: (value) {
+                        setState(() => likeNotifications = value);
+                        _updatePrefs();
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    const _SectionTitle(title: 'Uygulama'),
+                    const SizedBox(height: 12),
+                    _SwitchTile(
+                      icon: Icons.dark_mode_rounded,
+                      title: 'Koyu Tema',
+                      subtitle: 'Amedspor koyu tema deneyimi',
+                      value: darkMode,
+                      onChanged: (value) {
+                        setState(() => darkMode = value);
+                        AmedsporApp.of(context).setDarkMode(value);
+                      },
+                    ),
+                    _SettingsTile(
+                      icon: Icons.language_rounded,
+                      title: 'Dil',
+                      subtitle: 'Türkçe',
+                      onTap: _showLanguageDialog,
+                    ),
+                    _SettingsTile(
+                      icon: Icons.info_rounded,
+                      title: 'Hakkında',
+                      subtitle: 'Uygulama bilgileri ve sürüm',
+                      onTap: () => context.go('/about'),
+                    ),
+                    const SizedBox(height: 22),
+                    const _SectionTitle(title: 'Güvenlik'),
+                    const SizedBox(height: 12),
+                    _SettingsTile(
+                      icon: Icons.report_rounded,
+                      title: 'Raporlarım',
+                      subtitle: 'Gönderdiğin şikayetleri görüntüle',
+                      onTap: () => context.go('/reports'),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.privacy_tip_rounded,
+                      title: 'Gizlilik ve Kullanım Şartları',
+                      subtitle: 'Platform kuralları',
+                      onTap: () => context.go('/policy'),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: OutlinedButton.icon(
+                        onPressed: _logout,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryRed,
+                          side: const BorderSide(color: AppColors.primaryRed),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text(
+                          'Çıkış Yap',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -376,29 +397,32 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: PremiumCard(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF0F6A3D),
-          child: Icon(icon, color: Colors.white),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primaryGreen,
+            child: Icon(icon, color: Colors.white),
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
-        ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: Colors.white38,
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white38,
+          ),
         ),
       ),
     );
@@ -422,52 +446,34 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF0F6A3D),
-          child: Icon(icon, color: Colors.white),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: PremiumCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primaryGreen,
+            child: Icon(icon, color: Colors.white),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          trailing: Switch(
+            value: value,
+            activeColor: AppColors.primaryRed,
+            onChanged: onChanged,
           ),
         ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
-        ),
-        trailing: Switch(
-          value: value,
-          activeThumbColor: const Color(0xFFE53935),
-          onChanged: onChanged,
-        ),
       ),
-    );
-  }
-}
-
-class _DarkCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? margin;
-
-  const _DarkCard({required this.child, this.margin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: child,
     );
   }
 }

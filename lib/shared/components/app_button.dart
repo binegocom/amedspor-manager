@@ -10,6 +10,9 @@ class AppButton extends StatelessWidget {
   final AppButtonType type;
   final bool isLoading;
   final IconData? icon;
+  final double? width;
+  final double height;
+  final Color? color;
 
   const AppButton({
     super.key,
@@ -18,6 +21,9 @@ class AppButton extends StatelessWidget {
     this.type = AppButtonType.primary,
     this.isLoading = false,
     this.icon,
+    this.width,
+    this.height = 56,
+    this.color,
   });
 
   @override
@@ -28,23 +34,23 @@ class AppButton extends StatelessWidget {
 
     switch (type) {
       case AppButtonType.primary:
-        bgColor = AppColors.primaryGreen;
+        bgColor = color ?? AppColors.primaryGreen;
         break;
       case AppButtonType.secondary:
-        bgColor = AppColors.softGreen;
+        bgColor = color ?? AppColors.softGreen;
         break;
       case AppButtonType.outline:
         bgColor = Colors.transparent;
-        border = const BorderSide(color: Colors.white24);
+        border = BorderSide(color: color ?? Colors.white24);
         break;
       case AppButtonType.danger:
-        bgColor = AppColors.primaryRed;
+        bgColor = color ?? AppColors.primaryRed;
         break;
     }
 
     return SizedBox(
-      width: double.infinity,
-      height: 56,
+      width: width ?? double.infinity,
+      height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(

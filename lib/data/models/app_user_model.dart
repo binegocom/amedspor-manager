@@ -12,6 +12,9 @@ class AppUserModel {
   final String supportYear;
   final String role;
   final String? fcmToken;
+  final Map<String, bool> notificationPrefs;
+  final int followersCount;
+  final int followingCount;
 
   const AppUserModel({
     required this.id,
@@ -25,6 +28,13 @@ class AppUserModel {
     required this.supportYear,
     required this.role,
     this.fcmToken,
+    this.notificationPrefs = const {
+      'match': true,
+      'chat': true,
+      'like': true,
+    },
+    this.followersCount = 0,
+    this.followingCount = 0,
   });
 
   factory AppUserModel.fromMap(String id, Map<String, dynamic> map) {
@@ -40,6 +50,13 @@ class AppUserModel {
       supportYear: map['supportYear'] ?? '2024',
       role: map['role'] ?? 'user',
       fcmToken: map['fcmToken'] as String?,
+      notificationPrefs: Map<String, bool>.from(map['notificationPrefs'] ?? {
+        'match': true,
+        'chat': true,
+        'like': true,
+      }),
+      followersCount: map['followersCount'] ?? 0,
+      followingCount: map['followingCount'] ?? 0,
     );
   }
 
@@ -54,6 +71,9 @@ class AppUserModel {
       'city': city,
       'supportYear': supportYear,
       'role': role,
+      'notificationPrefs': notificationPrefs,
+      'followersCount': followersCount,
+      'followingCount': followingCount,
       if (fcmToken != null) 'fcmToken': fcmToken,
     };
   }

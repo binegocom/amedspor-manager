@@ -70,6 +70,18 @@ final appRouter = GoRouter(
     final bool isLoginRoute = state.matchedLocation == '/login';
     final user = authService.currentUser;
 
+    // Onboarding Protection
+    final hasSeenOnboarding = await appStateService.isOnboardingCompleted();
+    final bool isOnboardingRoute = state.matchedLocation == '/onboarding';
+
+    if (!hasSeenOnboarding && !isOnboardingRoute) {
+      return '/onboarding';
+    }
+
+    if (hasSeenOnboarding && isOnboardingRoute) {
+      return '/login'; // Or '/home' depending on auth, but GoRouter will handle it on next pass if user is logged in
+    }
+
     // Login screen protection (logged in users shouldn't see it)
     if (isLoginRoute && user != null) {
       return '/home';

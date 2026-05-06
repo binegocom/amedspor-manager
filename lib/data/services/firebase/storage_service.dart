@@ -16,4 +16,15 @@ class StorageService {
 
     return ref.getDownloadURL();
   }
+
+  Future<String> uploadPostImage({
+    required String postId,
+    required File file,
+  }) async {
+    final ref = _storage.ref('posts/$postId/image.jpg');
+
+    await ref.putFile(file, SettableMetadata(contentType: 'image/jpeg'));
+
+    return ref.getDownloadURL();
+  }
 }

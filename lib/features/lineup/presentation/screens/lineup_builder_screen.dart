@@ -15,6 +15,7 @@ import '../../../../data/repositories/player_repository.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../shared/components/login_required_modal.dart';
 import 'lineup_rating_result_screen.dart';
 
 class LineupBuilderScreen extends StatefulWidget {
@@ -74,42 +75,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
     return (ratingAverage + formationBonus + captainBonus).round().clamp(0, 100);
   }
 
-  void _showLoginRequired() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.lock_rounded, color: AppColors.primaryRed, size: 48),
-              const SizedBox(height: 16),
-              const Text('Üyelik Gerekli', style: AppTextStyles.h2),
-              const SizedBox(height: 12),
-              const Text(
-                'Kadronu kaydetmek, paylaşmak ve puan kazanmak için giriş yapmalısın.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted, height: 1.5),
-              ),
-              const SizedBox(height: 32),
-              AppButton(
-                text: 'GİRİŞ YAP',
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/login');
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
   void _changeFormation(String formation) {
     setState(() {
@@ -250,7 +216,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
   Future<void> _saveLineup() async {
     final user = authService.currentUser;
     if (user == null) {
-      _showLoginRequired();
+      showLoginRequiredModal(context);
       return;
     }
 
@@ -306,7 +272,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
   Future<void> _shareLineup() async {
     final user = authService.currentUser;
     if (user == null) {
-      _showLoginRequired();
+      showLoginRequiredModal(context);
       return;
     }
 

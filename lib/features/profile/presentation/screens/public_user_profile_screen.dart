@@ -5,6 +5,11 @@ import '../../../../data/models/app_user_model.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/repositories/user_repository.dart';
+import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/premium_card.dart';
+import '../../../../shared/components/login_required_modal.dart';
 
 class PublicUserProfileScreen extends StatefulWidget {
   final String userId;
@@ -20,18 +25,63 @@ class PublicUserProfileScreen extends StatefulWidget {
 
 class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
   bool isFollowing = false;
+  bool isActionLoading = false;
 
-  void _toggleFollow() {
-    setState(() => isFollowing = !isFollowing);
+  @override
+  void initState() {
+    super.initState();
+    _checkFollowStatus();
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF0F6A3D),
-        content: Text(
-          isFollowing ? 'Kullanıcı takip edildi.' : 'Takipten çıkarıldı.',
+  Future<void> _checkFollowStatus() async {
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    final status = await userRepository.isFollowing(user.uid, widget.userId);
+    if (!mounted) return;
+    setState(() => isFollowing = status);
+  }
+
+  Future<void> _toggleFollow() async {
+    final user = authService.currentUser;
+    if (user == null) {
+      showLoginRequiredModal(context);
+      return;
+    }
+
+    if (user.uid == widget.userId) return;
+
+    setState(() => isActionLoading = true);
+
+    try {
+      if (isFollowing) {
+        await userRepository.unfollowUser(user.uid, widget.userId);
+      } else {
+        await userRepository.followUser(user.uid, widget.userId);
+      }
+      
+      setState(() {
+        isFollowing = !isFollowing;
+        isActionLoading = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.primaryGreen,
+          content: Text(isFollowing ? 'Kullanıcı takip edildi.' : 'Takipten çıkarıldı.'),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      setState(() => isActionLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.errorRed,
+          content: Text('Hata: $e'),
+        ),
+      );
+    }
   }
 
   void _reportUser() {
@@ -44,7 +94,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
     final postRepository = PostRepository();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -72,25 +122,28 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                   final user = snapshot.data;
 
                   if (user == null) {
-                    return const _DarkCard(
+                    return const PremiumCard(
                       child: Text(
                         'Kullanıcı bulunamadı.',
-                        style: TextStyle(color: Color(0xFFB3B3B3)),
+                        style: TextStyle(color: AppColors.muted),
                       ),
                     );
                   }
 
-                  return _ProfileHero(
-                    user: user,
-                    isFollowing: isFollowing,
-                    onFollow: _toggleFollow,
+                  return Column(
+                    children: [
+                      _ProfileHero(
+                        user: user,
+                        isFollowing: isFollowing,
+                        isLoading: isActionLoading,
+                        onFollow: _toggleFollow,
+                      ),
+                      const SizedBox(height: 18),
+                      _StatsRow(user: user),
+                    ],
                   );
                 },
               ),
-
-              const SizedBox(height: 18),
-
-              const _StatsRow(),
 
               const SizedBox(height: 18),
 
@@ -117,10 +170,10 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                   }
 
                   if (posts.isEmpty) {
-                    return const _DarkCard(
+                    return const PremiumCard(
                       child: Text(
                         'Bu kullanicinin henuz paylasimi yok.',
-                        style: TextStyle(color: Color(0xFFB3B3B3)),
+                        style: TextStyle(color: AppColors.muted),
                       ),
                     );
                   }
@@ -172,7 +225,7 @@ class _Header extends StatelessWidget {
         const Spacer(),
         IconButton(
           onPressed: onReport,
-          icon: const Icon(Icons.flag_rounded, color: Color(0xFFE53935)),
+          icon: const Icon(Icons.flag_rounded, color: AppColors.primaryRed),
         ),
       ],
     );
@@ -182,11 +235,13 @@ class _Header extends StatelessWidget {
 class _ProfileHero extends StatelessWidget {
   final AppUserModel user;
   final bool isFollowing;
+  final bool isLoading;
   final VoidCallback onFollow;
 
   const _ProfileHero({
     required this.user,
     required this.isFollowing,
+    required this.isLoading,
     required this.onFollow,
   });
 
@@ -196,18 +251,7 @@ class _ProfileHero extends StatelessWidget {
         ? user.username
         : '@${user.username}';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: Colors.white10),
-      ),
+    return PremiumCard(
       child: Column(
         children: [
           Container(
@@ -215,8 +259,8 @@ class _ProfileHero extends StatelessWidget {
             height: 94,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF1A1A1A),
-              border: Border.all(color: const Color(0xFFE53935), width: 3),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.primaryRed, width: 3),
             ),
             child: user.avatarUrl.isEmpty
                 ? const Icon(
@@ -246,39 +290,42 @@ class _ProfileHero extends StatelessWidget {
           Text(
             user.badges.isEmpty ? 'Taraftar' : user.badges.first,
             style: const TextStyle(
-              color: Color(0xFFB3B3B3),
+              color: AppColors.muted,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: onFollow,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isFollowing
-                    ? const Color(0xFF1A1A1A)
-                    : const Color(0xFFE53935),
-                foregroundColor: Colors.white,
-                side: isFollowing
-                    ? const BorderSide(color: Colors.white24)
-                    : BorderSide.none,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          if (authService.currentUser?.uid != user.id)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: isLoading ? null : onFollow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isFollowing
+                      ? AppColors.surface
+                      : AppColors.primaryRed,
+                  foregroundColor: Colors.white,
+                  side: isFollowing
+                      ? const BorderSide(color: Colors.white24)
+                      : BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Icon(
+                        isFollowing
+                            ? Icons.check_circle_rounded
+                            : Icons.person_add_rounded,
+                      ),
+                label: Text(
+                  isFollowing ? 'Takip Ediliyor' : 'Takip Et',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
-              icon: Icon(
-                isFollowing
-                    ? Icons.check_circle_rounded
-                    : Icons.person_add_rounded,
-              ),
-              label: Text(
-                isFollowing ? 'Takip Ediliyor' : 'Takip Et',
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
             ),
-          ),
         ],
       ),
     );
@@ -286,22 +333,23 @@ class _ProfileHero extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow();
+  final AppUserModel? user;
+  const _StatsRow({this.user});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
+      children: [
         Expanded(
-          child: _StatCard(label: 'Puan', value: '2450'),
+          child: _StatCard(label: 'Puan', value: '${user?.points ?? 0}'),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(label: 'Takipçi', value: '318'),
+          child: _StatCard(label: 'Takipçi', value: '${user?.followersCount ?? 0}'),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(label: 'Post', value: '42'),
+          child: _StatCard(label: 'Takip', value: '${user?.followingCount ?? 0}'),
         ),
       ],
     );
@@ -316,7 +364,8 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Column(
         children: [
           Text(
@@ -331,7 +380,7 @@ class _StatCard extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              color: Color(0xFFB3B3B3),
+              color: AppColors.muted,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -352,14 +401,14 @@ class _BadgesRow extends StatelessWidget {
         Expanded(
           child: _BadgeCard(icon: Icons.emoji_events_rounded, title: 'Usta'),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: _BadgeCard(
             icon: Icons.local_fire_department_rounded,
             title: 'Aktif',
           ),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: _BadgeCard(icon: Icons.forum_rounded, title: 'Tribün'),
         ),
@@ -376,10 +425,11 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFFE53935), size: 30),
+          Icon(icon, color: AppColors.primaryRed, size: 30),
           const SizedBox(height: 8),
           Text(
             title,
@@ -408,13 +458,14 @@ class _PostPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         onTap: onTap,
         leading: const CircleAvatar(
-          backgroundColor: Color(0xFF0F6A3D),
+          backgroundColor: AppColors.primaryGreen,
           child: Icon(Icons.article_rounded, color: Colors.white),
         ),
         title: Text(
@@ -426,7 +477,9 @@ class _PostPreviewCard extends StatelessWidget {
         ),
         subtitle: Text(
           content,
-          style: const TextStyle(color: Color(0xFFB3B3B3)),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppColors.muted),
         ),
         trailing: const Icon(
           Icons.chevron_right_rounded,
@@ -451,27 +504,6 @@ class _SectionTitle extends StatelessWidget {
         fontSize: 18,
         fontWeight: FontWeight.w900,
       ),
-    );
-  }
-}
-
-class _DarkCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? margin;
-
-  const _DarkCard({required this.child, this.margin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: child,
     );
   }
 }

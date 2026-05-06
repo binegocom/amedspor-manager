@@ -40,27 +40,19 @@ class AdminMatchesScreen extends StatelessWidget {
 
     return AdminLayout(
       activeRoute: routePath,
+      title: 'Fikstür Yönetimi',
+      subtitle: 'Maçları düzenle, sil ve canlı kontrol merkezine eriş',
+      actions: [
+        AppButton(
+          text: 'YENİ MAÇ EKLE',
+          width: 200,
+          icon: Icons.add_rounded,
+          onTap: () => context.go('/admin/matches/create'),
+        ),
+      ],
       child: ListView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Fikstür Yönetimi', style: AppTextStyles.h1),
-                  Text('Maçları düzenle, sil ve canlı kontrol merkezine eriş', style: AppTextStyles.body),
-                ],
-              ),
-              AppButton(
-                text: 'YENİ MAÇ EKLE',
-                width: 200,
-                icon: Icons.add_rounded,
-                onTap: () => context.go('/admin/matches/create'),
-              ),
-            ],
-          ),
           const SizedBox(height: 32),
           StreamBuilder<List<MatchModel>>(
             stream: matchRepository.watchMatches(),
@@ -107,12 +99,16 @@ class _AdminMatchCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 52,
+            height: 52,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: isLive ? AppColors.primaryRed.withValues(alpha: 0.1) : AppColors.surface,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28),
+            child: match.homeLogo.isNotEmpty
+                ? Image.network(match.homeLogo, fit: BoxFit.contain)
+                : Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28),
           ),
           const SizedBox(width: 20),
           Expanded(

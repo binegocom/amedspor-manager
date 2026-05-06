@@ -129,27 +129,19 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
   Widget build(BuildContext context) {
     return AdminLayout(
       activeRoute: AdminPlayersScreen.routePath,
+      title: 'Oyuncu Havuzu',
+      subtitle: 'Kadro oluşturma için kullanılacak oyuncu listesi',
+      actions: [
+        AppButton(
+          text: 'YENİ OYUNCU',
+          width: 180,
+          icon: Icons.add_rounded,
+          onTap: () => _openPlayerDialog(),
+        ),
+      ],
       child: ListView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Oyuncu Havuzu', style: AppTextStyles.h1),
-                  Text('Kadro oluşturma için kullanılacak oyuncu listesi', style: AppTextStyles.body),
-                ],
-              ),
-              AppButton(
-                text: 'YENİ OYUNCU',
-                width: 180,
-                icon: Icons.add_rounded,
-                onTap: () => _openPlayerDialog(),
-              ),
-            ],
-          ),
           const SizedBox(height: 32),
           Wrap(
             spacing: 12,

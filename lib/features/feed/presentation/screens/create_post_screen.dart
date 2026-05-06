@@ -1,10 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/premium_card.dart';
+import '../../../../shared/components/app_button.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -24,6 +30,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   String selectedCategory = 'Maç Yorumu';
   bool isPublishing = false;
+  XFile? selectedImage;
+  final picker = ImagePicker();
 
   final List<String> categories = const [
     'Maç Yorumu',
@@ -40,51 +48,54 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _publishPost() async {
-    if (isPublishing) return;
-
     final title = titleController.text.trim();
     final content = contentController.text.trim();
-    final user = authService.currentUser;
-
-    if (user == null) {
-      context.go('/login');
-      return;
-    }
 
     if (title.isEmpty || content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFFE53935),
-          content: Text('Başlık ve içerik boş olamaz.'),
-        ),
+        const SnackBar(content: Text('Lütfen başlık ve içerik girin.')),
       );
       return;
     }
 
-    final post = PostModel(
-      id: uuid.v4(),
-      userId: user.uid,
-      username: user.email ?? 'Taraftar',
-      title: title,
-      content: content,
-      category: selectedCategory,
-      likes: 0,
-      commentsCount: 0,
-      lineupId: '',
-      createdAt: DateTime.now(),
-    );
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    final postId = uuid.v4();
+    String? imageUrl;
 
     setState(() => isPublishing = true);
 
     try {
+      if (selectedImage != null) {
+        imageUrl = await storageService.uploadPostImage(
+          postId: postId,
+          file: File(selectedImage!.path),
+        );
+      }
+
+      final post = PostModel(
+        id: postId,
+        userId: user.uid,
+        username: user.email ?? 'Taraftar',
+        title: title,
+        content: content,
+        category: selectedCategory,
+        likes: 0,
+        commentsCount: 0,
+        lineupId: '',
+        imageUrl: imageUrl,
+        createdAt: DateTime.now(),
+      );
+
       await postRepository.createPost(post);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => isPublishing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFFE53935),
-          content: Text('Post yayinlanamadi. Lutfen tekrar deneyin.'),
+        SnackBar(
+          backgroundColor: AppColors.errorRed,
+          content: Text('Hata: $e'),
         ),
       );
       return;
@@ -94,12 +105,19 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        backgroundColor: Color(0xFF0F6A3D),
+        backgroundColor: AppColors.primaryGreen,
         content: Text('Post yayınlandı.'),
       ),
     );
 
     context.go('/feed');
+  }
+
+  Future<void> _pickImage() async {
+    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (image != null) {
+      setState(() => selectedImage = image);
+    }
   }
 
   @override
@@ -129,12 +147,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
               const Text(
                 'Maç yorumu, kadro fikri veya tribün çağrısı paylaş.',
-                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
+                style: TextStyle(color: AppColors.muted, height: 1.5),
               ),
 
               const SizedBox(height: 26),
 
-              _DarkCard(
+              PremiumCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -164,12 +182,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: active
-                                  ? const Color(0xFF0F6A3D)
-                                  : const Color(0xFF111111),
+                                  ? AppColors.primaryGreen
+                                  : AppColors.surface,
                               borderRadius: BorderRadius.circular(99),
                               border: Border.all(
                                 color: active
-                                    ? const Color(0xFF0F6A3D)
+                                    ? AppColors.primaryGreen
                                     : Colors.white10,
                               ),
                             ),
@@ -178,7 +196,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                               style: TextStyle(
                                 color: active
                                     ? Colors.white
-                                    : const Color(0xFFB3B3B3),
+                                    : AppColors.muted,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -202,38 +220,75 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
               TextField(
                 controller: contentController,
-                minLines: 7,
-                maxLines: 10,
+                minLines: 5,
+                maxLines: 8,
                 style: const TextStyle(color: Colors.white),
-                cursorColor: const Color(0xFFE53935),
+                cursorColor: AppColors.primaryRed,
                 decoration: InputDecoration(
                   labelText: 'İçerik',
                   alignLabelWithHint: true,
-                  labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
+                  labelStyle: const TextStyle(color: AppColors.muted),
                   prefixIcon: const Padding(
-                    padding: EdgeInsets.only(bottom: 126),
-                    child: Icon(Icons.edit_rounded, color: Color(0xFF0F6A3D)),
+                    padding: EdgeInsets.only(bottom: 80),
+                    child: Icon(Icons.edit_rounded, color: AppColors.primaryGreen),
                   ),
                   filled: true,
-                  fillColor: const Color(0xFF1A1A1A),
+                  fillColor: AppColors.surface,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: const BorderSide(color: Colors.white10),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFE53935)),
+                    borderSide: const BorderSide(color: AppColors.primaryRed),
                   ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              _DarkCard(
+              const Text(
+                'Görsel Ekle',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              GestureDetector(
+                onTap: _pickImage,
+                child: PremiumCard(
+                  padding: EdgeInsets.zero,
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: selectedImage != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Image.file(
+                              File(selectedImage!.path),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.add_photo_alternate_rounded, color: AppColors.muted, size: 40),
+                              SizedBox(height: 8),
+                              Text('Fotoğraf Seç', style: TextStyle(color: AppColors.muted)),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              PremiumCard(
                 child: Row(
                   children: const [
                     CircleAvatar(
-                      backgroundColor: Color(0xFFE53935),
+                      backgroundColor: AppColors.primaryRed,
                       child: Icon(Icons.info_rounded, color: Colors.white),
                     ),
                     SizedBox(width: 14),
@@ -241,7 +296,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       child: Text(
                         'Hakaret, küfür ve provokatif içerikler moderasyon tarafından kaldırılır.',
                         style: TextStyle(
-                          color: Color(0xFFB3B3B3),
+                          color: AppColors.muted,
                           height: 1.4,
                           fontWeight: FontWeight.w600,
                         ),
@@ -253,35 +308,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
               const SizedBox(height: 24),
 
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isPublishing ? null : _publishPost,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: isPublishing
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'YAYINLA',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                          ),
-                        ),
-                ),
+              AppButton(
+                text: 'YAYINLA',
+                isLoading: isPublishing,
+                onTap: _publishPost,
               ),
             ],
           ),
@@ -334,42 +364,22 @@ class _InputField extends StatelessWidget {
     return TextField(
       controller: controller,
       style: const TextStyle(color: Colors.white),
-      cursorColor: const Color(0xFFE53935),
+      cursorColor: AppColors.primaryRed,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-        prefixIcon: Icon(icon, color: const Color(0xFF0F6A3D)),
+        labelStyle: const TextStyle(color: AppColors.muted),
+        prefixIcon: Icon(icon, color: AppColors.primaryGreen),
         filled: true,
-        fillColor: const Color(0xFF1A1A1A),
+        fillColor: AppColors.surface,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: Colors.white10),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFE53935)),
+          borderSide: const BorderSide(color: AppColors.primaryRed),
         ),
       ),
-    );
-  }
-}
-
-class _DarkCard extends StatelessWidget {
-  final Widget child;
-
-  const _DarkCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: child,
     );
   }
 }

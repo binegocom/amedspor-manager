@@ -11,6 +11,10 @@ class AppColors {
   static const Color muted = Color(0xFFA7B3AA);
   static const Color gold = Color(0xFFFFB300);
   static const Color error = Color(0xFFE53935);
+  static const Color red = Color(0xFFE53935);
+  static const Color errorRed = Color(0xFFE53935);
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFA7B3AA);
 
   // Gradient definitions
   static const LinearGradient backgroundGradient = LinearGradient(

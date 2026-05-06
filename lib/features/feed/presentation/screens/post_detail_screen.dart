@@ -6,6 +6,10 @@ import '../../../../data/models/comment_model.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/premium_card.dart';
+import '../../../../shared/components/login_required_modal.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String postId;
@@ -31,7 +35,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Future<void> _toggleLike(PostModel post) async {
     if (!isLoggedIn) {
-      _showLoginRequired('Beğeni yapmak için giriş yapmalısın.');
+      showLoginRequiredModal(context);
       return;
     }
 
@@ -52,7 +56,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final user = authService.currentUser;
 
     if (user == null) {
-      _showLoginRequired('Yorum yapmak için giriş yapmalısın.');
+      showLoginRequiredModal(context);
       return;
     }
 
@@ -78,7 +82,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   void _focusCommentInput() {
     if (!isLoggedIn) {
-      _showLoginRequired('Yorum yapmak iÃ§in giriÅŸ yapmalÄ±sÄ±n.');
+      showLoginRequiredModal(context);
       return;
     }
 
@@ -88,79 +92,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFFE53935),
+        backgroundColor: AppColors.errorRed,
         content: Text(message),
       ),
-    );
-  }
-
-  void _showLoginRequired(String message) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.lock_rounded,
-                color: Color(0xFFE53935),
-                size: 44,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Üyelik Gerekli',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
-              ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.go('/login');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Giriş Yap',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Vazgeç',
-                  style: TextStyle(color: Color(0xFFB3B3B3)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -178,7 +112,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -191,7 +125,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   if (postSnapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFFE53935),
+                        color: AppColors.primaryRed,
                       ),
                     );
                   }
@@ -202,7 +136,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     return const Center(
                       child: Text(
                         'Post bulunamadı.',
-                        style: TextStyle(color: Color(0xFFB3B3B3)),
+                        style: TextStyle(color: AppColors.muted),
                       ),
                     );
                   }
@@ -215,14 +149,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       return ListView(
                         padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
                         children: [
-                          _DarkCard(
+                          PremiumCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     const CircleAvatar(
-                                      backgroundColor: Color(0xFF0F6A3D),
+                                      backgroundColor: AppColors.primaryGreen,
                                       child: Icon(
                                         Icons.person_rounded,
                                         color: Colors.white,
@@ -233,7 +167,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       child: Text(
                                         post.username,
                                         style: const TextStyle(
-                                          color: Color(0xFFE53935),
+                                          color: AppColors.primaryRed,
                                           fontWeight: FontWeight.w900,
                                         ),
                                       ),
@@ -241,7 +175,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     Text(
                                       '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')}',
                                       style: const TextStyle(
-                                        color: Color(0xFF777777),
+                                        color: AppColors.muted,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -250,21 +184,29 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 const SizedBox(height: 18),
                                 Text(
                                   post.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                                  style: AppTextStyles.h2,
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   post.content,
                                   style: const TextStyle(
-                                    color: Color(0xFFB3B3B3),
+                                    color: AppColors.muted,
                                     height: 1.5,
                                     fontSize: 15,
                                   ),
                                 ),
+                                if (post.imageUrl != null) ...[
+                                  const SizedBox(height: 16),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.network(
+                                      post.imageUrl!,
+                                      width: double.infinity,
+                                      fit: BoxFit.fitWidth,
+                                      errorBuilder: (_, __, ___) => const SizedBox(),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 18),
                                 Row(
                                   children: [
@@ -363,7 +305,7 @@ class _Header extends StatelessWidget {
           const Spacer(),
           IconButton(
             onPressed: onReport,
-            icon: const Icon(Icons.flag_rounded, color: Color(0xFFE53935)),
+            icon: const Icon(Icons.flag_rounded, color: AppColors.primaryRed),
           ),
         ],
       ),
@@ -421,37 +363,39 @@ class _CommentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFF0F6A3D),
-            child: Icon(Icons.person_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  comment.username,
-                  style: const TextStyle(
-                    color: Color(0xFFE53935),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  comment.text,
-                  style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.4),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: PremiumCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.primaryGreen,
+              child: Icon(Icons.person_rounded, color: Colors.white, size: 20),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    comment.username,
+                    style: const TextStyle(
+                      color: AppColors.primaryRed,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    comment.text,
+                    style: const TextStyle(color: AppColors.muted, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -485,12 +429,12 @@ class _CommentInputBar extends StatelessWidget {
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
               style: const TextStyle(color: Colors.white),
-              cursorColor: const Color(0xFFE53935),
+              cursorColor: AppColors.primaryRed,
               decoration: InputDecoration(
                 hintText: 'Yorum yaz...',
-                hintStyle: const TextStyle(color: Color(0xFF777777)),
+                hintStyle: const TextStyle(color: AppColors.muted),
                 filled: true,
-                fillColor: const Color(0xFF1A1A1A),
+                fillColor: AppColors.surface,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 13,
@@ -509,7 +453,7 @@ class _CommentInputBar extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: const BoxDecoration(
-                color: Color(0xFFE53935),
+                color: AppColors.primaryRed,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white),
@@ -517,28 +461,6 @@ class _CommentInputBar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DarkCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? margin;
-
-  const _DarkCard({required this.child, this.margin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: child,
     );
   }
 }

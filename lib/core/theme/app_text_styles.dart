@@ -38,6 +38,8 @@ class AppTextStyles {
     height: 1.4,
   );
 
+  static const TextStyle body = bodyMedium;
+
   static const TextStyle label = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w800,

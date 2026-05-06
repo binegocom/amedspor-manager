@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+ import '../../../../data/models/match_model.dart';
 import '../../../../data/repositories/match_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../widgets/admin_layout.dart';
 import '../widgets/admin_sidebar.dart';
 
 class AdminCreateMatchScreen extends StatefulWidget {
@@ -20,7 +22,10 @@ class AdminCreateMatchScreen extends StatefulWidget {
 class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
   final homeTeamController = TextEditingController();
   final awayTeamController = TextEditingController();
-  final scoreController = TextEditingController();
+  final homeLogoController = TextEditingController();
+  final awayLogoController = TextEditingController();
+  final homeScoreController = TextEditingController(text: '0');
+  final awayScoreController = TextEditingController(text: '0');
 
   final matchRepository = MatchRepository();
 
@@ -33,14 +38,6 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
 
   bool get isEditing => widget.matchId != null;
 
-  Future<bool> _isAdmin() async {
-    final user = authService.currentUser;
-    if (user == null) return false;
-
-    final doc = await firestoreService.users.doc(user.uid).get();
-    return doc.data()?['role'] == 'admin';
-  }
-
   Future<void> _loadMatch() async {
     if (isLoaded || !isEditing) return;
 
@@ -52,7 +49,10 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
 
     homeTeamController.text = match.homeTeam;
     awayTeamController.text = match.awayTeam;
-    scoreController.text = match.score;
+    homeLogoController.text = match.homeLogo;
+    awayLogoController.text = match.awayLogo;
+    homeScoreController.text = match.homeScore.toString();
+    awayScoreController.text = match.awayScore.toString();
     selectedDate = match.matchDate;
     selectedTime = TimeOfDay(
       hour: match.matchDate.hour,
@@ -88,7 +88,8 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
   Future<void> _saveMatch() async {
     final homeTeam = homeTeamController.text.trim();
     final awayTeam = awayTeamController.text.trim();
-    final score = scoreController.text.trim();
+    final homeLogo = homeLogoController.text.trim();
+    final awayLogo = awayLogoController.text.trim();
 
     if (homeTeam.isEmpty || awayTeam.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,18 +112,23 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
         selectedTime.minute,
       );
 
-      final data = {
-        'homeTeam': homeTeam,
-        'awayTeam': awayTeam,
-        'matchDate': matchDate.toIso8601String(),
-        'status': status,
-        'score': score,
-      };
+      final match = MatchModel(
+        id: widget.matchId ?? firestoreService.matches.doc().id,
+        homeTeam: homeTeam,
+        awayTeam: awayTeam,
+        homeLogo: homeLogo,
+        awayLogo: awayLogo,
+        matchDate: matchDate,
+        status: status,
+        homeScore: int.tryParse(homeScoreController.text) ?? 0,
+        awayScore: int.tryParse(awayScoreController.text) ?? 0,
+        minute: 0,
+      );
 
       if (isEditing) {
-        await firestoreService.matches.doc(widget.matchId!).update(data);
+        await matchRepository.updateMatch(match);
       } else {
-        await firestoreService.matches.add(data);
+        await matchRepository.createMatch(match);
       }
 
       if (!mounted) return;
@@ -217,326 +223,209 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAdmin(),
-      builder: (context, adminSnapshot) {
-        if (adminSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0E0E0E),
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFFE53935)),
-            ),
-          );
-        }
-
-        if (adminSnapshot.data != true) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0E0E0E),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Admin girişi yap'),
-              ),
-            ),
-          );
-        }
-
-        return FutureBuilder<void>(
-          future: _loadMatch(),
-          builder: (context, matchSnapshot) {
-            if (matchSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                backgroundColor: Color(0xFF0E0E0E),
-                body: Center(
-                  child: CircularProgressIndicator(color: Color(0xFFE53935)),
+    return FutureBuilder<void>(
+      future: _loadMatch(),
+      builder: (context, snapshot) {
+        return AdminLayout(
+          activeRoute: '/admin/matches',
+          title: isEditing ? 'Maçı Düzenle' : 'Yeni Maç Ekle',
+          subtitle: 'Maç bilgilerini, skorunu ve durumunu buradan yönet.',
+          actions: [
+            if (isEditing)
+              OutlinedButton.icon(
+                onPressed: isDeleting ? null : _deleteMatch,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFE53935),
+                  side: const BorderSide(color: Color(0xFFE53935)),
                 ),
-              );
-            }
-
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 900;
-
-                return Scaffold(
-                  backgroundColor: const Color(0xFF0E0E0E),
-                  appBar: compact
-                      ? AppBar(
-                          backgroundColor: const Color(0xFF111111),
-                          foregroundColor: Colors.white,
-                          title: Text(
-                            isEditing ? 'Maçı Düzenle' : 'Yeni Maç Ekle',
-                          ),
-                        )
-                      : null,
-                  drawer: compact
-                      ? const Drawer(
-                          backgroundColor: Color(0xFF111111),
-                          child: AdminSidebar(
-                            activeRoute: '/admin/matches',
-                            width: double.infinity,
-                          ),
-                        )
-                      : null,
-                  body: Row(
+                icon: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFE53935),
+                        ),
+                      )
+                    : const Icon(Icons.delete_rounded),
+                label: Text(isDeleting ? 'Siliniyor...' : 'Sil'),
+              ),
+          ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: _AdminCard(
+                  child: Column(
                     children: [
-                      if (!compact) const _AdminSidebar(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(28),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 760),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        onPressed: () =>
-                                            context.go('/admin/matches'),
-                                        icon: const Icon(
-                                          Icons.arrow_back_rounded,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        isEditing
-                                            ? 'Maçı Düzenle'
-                                            : 'Yeni Maç Ekle',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      if (isEditing)
-                                        Flexible(
-                                          child: OutlinedButton.icon(
-                                            onPressed: isDeleting
-                                                ? null
-                                                : _deleteMatch,
-                                            style: OutlinedButton.styleFrom(
-                                              foregroundColor: const Color(
-                                                0xFFE53935,
-                                              ),
-                                              side: const BorderSide(
-                                                color: Color(0xFFE53935),
-                                              ),
-                                            ),
-                                            icon: isDeleting
-                                                ? const SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: Color(
-                                                            0xFFE53935,
-                                                          ),
-                                                        ),
-                                                  )
-                                                : const Icon(
-                                                    Icons.delete_rounded,
-                                                  ),
-                                            label: Text(
-                                              isDeleting
-                                                  ? 'Siliniyor...'
-                                                  : 'Sil',
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Maç bilgilerini, skorunu ve durumunu buradan yönet.',
-                                    style: TextStyle(
-                                      color: Color(0xFFB3B3B3),
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 28),
-
-                                  _AdminCard(
-                                    child: Column(
-                                      children: [
-                                        _AdminTextField(
-                                          controller: homeTeamController,
-                                          label: 'Ev sahibi takım',
-                                          icon: Icons.home_rounded,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _AdminTextField(
-                                          controller: awayTeamController,
-                                          label: 'Rakip takım',
-                                          icon: Icons.shield_rounded,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final compact =
-                                                constraints.maxWidth < 520;
-                                            final datePicker = _PickerTile(
-                                              icon:
-                                                  Icons.calendar_month_rounded,
-                                              title: 'Tarih',
-                                              value:
-                                                  '${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
-                                              onTap: _pickDate,
-                                            );
-                                            final timePicker = _PickerTile(
-                                              icon: Icons.schedule_rounded,
-                                              title: 'Saat',
-                                              value:
-                                                  '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                                              onTap: _pickTime,
-                                            );
-
-                                            if (compact) {
-                                              return Column(
-                                                children: [
-                                                  datePicker,
-                                                  const SizedBox(height: 16),
-                                                  timePicker,
-                                                ],
-                                              );
-                                            }
-
-                                            return Row(
-                                              children: [
-                                                Expanded(child: datePicker),
-                                                const SizedBox(width: 16),
-                                                Expanded(child: timePicker),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF111111),
-                                            borderRadius: BorderRadius.circular(
-                                              18,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.white10,
-                                            ),
-                                          ),
-                                          child: DropdownButtonHideUnderline(
-                                            child: DropdownButton<String>(
-                                              value: status,
-                                              dropdownColor: const Color(
-                                                0xFF1A1A1A,
-                                              ),
-                                              iconEnabledColor: Colors.white,
-                                              isExpanded: true,
-                                              items: const [
-                                                DropdownMenuItem(
-                                                  value: 'upcoming',
-                                                  child: Text(
-                                                    'Yaklaşan Maç',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                                DropdownMenuItem(
-                                                  value: 'live',
-                                                  child: Text(
-                                                    'Canlı',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                                DropdownMenuItem(
-                                                  value: 'finished',
-                                                  child: Text(
-                                                    'Tamamlandı',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                              onChanged: (value) {
-                                                if (value == null) return;
-                                                setState(() => status = value);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _AdminTextField(
-                                          controller: scoreController,
-                                          label: 'Skor (örn: 2-1)',
-                                          icon: Icons.scoreboard_rounded,
-                                        ),
-                                        const SizedBox(height: 26),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          height: 54,
-                                          child: ElevatedButton.icon(
-                                            onPressed: isSaving
-                                                ? null
-                                                : _saveMatch,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFFE53935,
-                                              ),
-                                              foregroundColor: Colors.white,
-                                              disabledBackgroundColor:
-                                                  Colors.white12,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                              ),
-                                            ),
-                                            icon: isSaving
-                                                ? const SizedBox(
-                                                    width: 18,
-                                                    height: 18,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: Colors.white,
-                                                        ),
-                                                  )
-                                                : const Icon(
-                                                    Icons.save_rounded,
-                                                  ),
-                                            label: Text(
-                                              isSaving
-                                                  ? 'Kaydediliyor...'
-                                                  : isEditing
-                                                  ? 'DEĞİŞİKLİKLERİ KAYDET'
-                                                  : 'MAÇI KAYDET',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: homeTeamController,
+                              label: 'Ev sahibi takım',
+                              icon: Icons.home_rounded,
                             ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: homeLogoController,
+                              label: 'Ev sahibi logo URL',
+                              icon: Icons.image_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: awayTeamController,
+                              label: 'Rakip takım',
+                              icon: Icons.shield_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: awayLogoController,
+                              label: 'Rakip logo URL',
+                              icon: Icons.image_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: homeScoreController,
+                              label: 'Ev sahibi skor',
+                              icon: Icons.scoreboard_rounded,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _AdminTextField(
+                              controller: awayScoreController,
+                              label: 'Rakip skor',
+                              icon: Icons.scoreboard_rounded,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+                          final datePicker = _PickerTile(
+                            icon: Icons.calendar_month_rounded,
+                            title: 'Tarih',
+                            value: '${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
+                            onTap: _pickDate,
+                          );
+                          final timePicker = _PickerTile(
+                            icon: Icons.schedule_rounded,
+                            title: 'Saat',
+                            value: '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                            onTap: _pickTime,
+                          );
+
+                          if (compact) {
+                            return Column(
+                              children: [
+                                datePicker,
+                                const SizedBox(height: 16),
+                                timePicker,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: datePicker),
+                              const SizedBox(width: 16),
+                              Expanded(child: timePicker),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111111),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: status,
+                            dropdownColor: const Color(0xFF1A1A1A),
+                            iconEnabledColor: Colors.white,
+                            isExpanded: true,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'upcoming',
+                                child: Text('Yaklaşan Maç', style: TextStyle(color: Colors.white)),
+                              ),
+                              DropdownMenuItem(
+                                value: 'live',
+                                child: Text('Canlı', style: TextStyle(color: Colors.white)),
+                              ),
+                              DropdownMenuItem(
+                                value: 'finished',
+                                child: Text('Tamamlandı', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => status = value);
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: isSaving ? null : _saveMatch,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE53935),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.white12,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          icon: isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.save_rounded),
+                          label: Text(
+                            isSaving
+                                ? 'Kaydediliyor...'
+                                : isEditing
+                                    ? 'DEĞİŞİKLİKLERİ KAYDET'
+                                    : 'MAÇI KAYDET',
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            );
-          },
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -566,17 +455,20 @@ class _AdminTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final TextInputType keyboardType;
 
   const _AdminTextField({
     required this.controller,
     required this.label,
     required this.icon,
+    this.keyboardType = TextInputType.text,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
       cursorColor: const Color(0xFFE53935),
       decoration: InputDecoration(
@@ -655,143 +547,4 @@ class _PickerTile extends StatelessWidget {
   }
 }
 
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            active: true,
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          _SidebarItem(
-            icon: Icons.forum_rounded,
-            title: 'Sohbet',
-            onTap: () => context.go('/admin/chats'),
-          ),
-          _SidebarItem(
-            icon: Icons.emoji_events_rounded,
-            title: 'Tahminler',
-            onTap: () => context.go('/admin/predictions'),
-          ),
-          _SidebarItem(
-            icon: Icons.settings_rounded,
-            title: 'Ayarlar',
-            onTap: () => context.go('/admin/settings'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}

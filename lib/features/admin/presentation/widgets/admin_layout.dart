@@ -7,6 +7,9 @@ import 'admin_sidebar.dart';
 class AdminLayout extends StatelessWidget {
   final String activeRoute;
   final bool allowModerator;
+  final String? title;
+  final String? subtitle;
+  final List<Widget>? actions;
   final Widget child;
 
   const AdminLayout({
@@ -14,6 +17,9 @@ class AdminLayout extends StatelessWidget {
     required this.activeRoute,
     required this.child,
     this.allowModerator = false,
+    this.title,
+    this.subtitle,
+    this.actions,
   });
 
   Future<bool> _canAccess() {
@@ -79,7 +85,55 @@ class AdminLayout extends StatelessWidget {
               body: Row(
                 children: [
                   if (!compact) AdminSidebar(activeRoute: activeRoute),
-                  Expanded(child: child),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (title != null || subtitle != null || actions != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (title != null)
+                                        Text(
+                                          title!,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      if (subtitle != null) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          subtitle!,
+                                          style: const TextStyle(
+                                            color: Color(0xFFA7B3AA),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (actions != null) ...[
+                                  const SizedBox(width: 24),
+                                  Row(children: actions!),
+                                ],
+                              ],
+                            ),
+                          ),
+                        if (title != null || subtitle != null || actions != null)
+                          const SizedBox(height: 32),
+                        Expanded(child: child),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

@@ -13,6 +13,7 @@ import 'push_navigation_service.dart';
 import 'foreground_notification_service.dart';
 import 'seed_service.dart';
 import '../local/app_state_service.dart';
+import '../../repositories/user_repository.dart';
 
 final authService = AuthService(FirebaseAuth.instance);
 
@@ -29,3 +30,5 @@ final foregroundNotificationService = ForegroundNotificationService();
 final seedService = SeedService(FirebaseFirestore.instance);
 
 final appStateService = AppStateService();
+
+final userRepository = UserRepository();

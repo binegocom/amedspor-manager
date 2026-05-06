@@ -4,6 +4,8 @@ class MatchModel {
   final String id;
   final String homeTeam;
   final String awayTeam;
+  final String homeLogo;
+  final String awayLogo;
   final DateTime matchDate;
   final String status;
   final int homeScore;
@@ -13,10 +15,15 @@ class MatchModel {
   final bool isMotmVotingActive;
   final Map<String, int> motmResults;
 
+  bool get isLive => status == 'live' || status == 'halftime';
+  bool get isFinished => status == 'finished';
+
   const MatchModel({
     required this.id,
     required this.homeTeam,
     required this.awayTeam,
+    required this.homeLogo,
+    required this.awayLogo,
     required this.matchDate,
     required this.status,
     required this.homeScore,
@@ -37,6 +44,8 @@ class MatchModel {
       id: id,
       homeTeam: map['homeTeam'] ?? '',
       awayTeam: map['awayTeam'] ?? '',
+      homeLogo: map['homeLogo'] ?? '',
+      awayLogo: map['awayLogo'] ?? '',
       matchDate: DateTime.tryParse(map['matchDate'] ?? '') ?? DateTime.now(),
       status: map['status'] ?? 'upcoming',
       homeScore: map['homeScore'] ?? 0,
@@ -52,6 +61,8 @@ class MatchModel {
     return {
       'homeTeam': homeTeam,
       'awayTeam': awayTeam,
+      'homeLogo': homeLogo,
+      'awayLogo': awayLogo,
       'matchDate': matchDate.toIso8601String(),
       'status': status,
       'homeScore': homeScore,

@@ -109,6 +109,14 @@ class MatchRepository {
     });
   }
 
+  Future<void> createMatch(MatchModel match) async {
+    await _firestore.collection('matches').doc(match.id).set(match.toMap());
+  }
+
+  Future<void> updateMatch(MatchModel match) async {
+    await _firestore.collection('matches').doc(match.id).update(match.toMap());
+  }
+
   Future<String?> getUserMotmVote(String matchId, String userId) async {
     final doc = await firestoreService.motmVotes(matchId).doc(userId).get();
     if (!doc.exists) return null;

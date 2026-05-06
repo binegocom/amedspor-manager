@@ -57,13 +57,12 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AdminLayout(
       activeRoute: AdminDashboardScreen.routePath,
+      title: 'Admin Dashboard',
+      subtitle: 'Platform yönetim ve istatistik merkezi',
       child: ListView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         children: [
-          const Text('Admin Dashboard', style: AppTextStyles.h1),
           const SizedBox(height: 8),
-          const Text('Platform yönetim ve istatistik merkezi', style: AppTextStyles.body),
-          const SizedBox(height: 40),
           StreamBuilder<Map<String, int>>(
             stream: _watchStats(),
             builder: (context, snapshot) {

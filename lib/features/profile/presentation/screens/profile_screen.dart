@@ -110,6 +110,12 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => context.go('/leaderboard'),
               ),
               _MenuTile(
+                icon: Icons.emoji_events_rounded,
+                title: 'Haftanın Kadroları',
+                subtitle: 'En çok beğenilen taraftar kadroları',
+                onTap: () => context.go('/lineups/top'),
+              ),
+              _MenuTile(
                 icon: Icons.notifications_rounded,
                 title: 'Bildirimler',
                 subtitle: 'Aktiviteler ve maç hatırlatmaları',

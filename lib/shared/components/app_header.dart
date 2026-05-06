@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_colors.dart';
 
 class AppHeader extends StatelessWidget {
   final String title;
-  final IconData? icon;
-  final VoidCallback? onBack;
+  final Widget? leading;
   final List<Widget>? actions;
+  final bool showBackButton;
 
   const AppHeader({
     super.key,
     required this.title,
-    this.icon,
-    this.onBack,
+    this.leading,
     this.actions,
+    this.showBackButton = true,
   });
 
   @override
@@ -21,23 +22,18 @@ class AppHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
       child: Row(
         children: [
-          if (onBack != null)
+          if (showBackButton)
             IconButton(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            ),
-          if (icon != null) ...[
-            Icon(icon, color: AppColors.red),
-            const SizedBox(width: 10),
-          ],
+              onPressed: () => Navigator.maybePop(context),
+              icon: const Icon(Icons.arrow_back_rounded, color: AppColors.white),
+            )
+          else ?leading,
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-              ),
+              style: AppTextStyles.h3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (actions != null) ...actions!,

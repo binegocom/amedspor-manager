@@ -11,6 +11,14 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get matches =>
       _db.collection('matches');
 
+  CollectionReference<Map<String, dynamic>> matchEvents(String matchId) {
+    return matches.doc(matchId).collection('events');
+  }
+
+  CollectionReference<Map<String, dynamic>> motmVotes(String matchId) {
+    return matches.doc(matchId).collection('motmVotes');
+  }
+
   CollectionReference<Map<String, dynamic>> get lineups =>
       _db.collection('lineups');
 
@@ -29,11 +37,25 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get notifications =>
       _db.collection('notifications');
 
+  CollectionReference<Map<String, dynamic>> get players =>
+      _db.collection('players');
+
+  CollectionReference<Map<String, dynamic>> get questions =>
+      _db.collection('questions');
+
   CollectionReference<Map<String, dynamic>> messages(String roomId) {
     return chatRooms.doc(roomId).collection('messages');
   }
 
   CollectionReference<Map<String, dynamic>> comments(String postId) {
     return posts.doc(postId).collection('comments');
+  }
+
+  CollectionReference<Map<String, dynamic>> lineupComments(String lineupId) {
+    return lineups.doc(lineupId).collection('comments');
+  }
+
+  CollectionReference<Map<String, dynamic>> lineupLikes(String lineupId) {
+    return lineups.doc(lineupId).collection('likes');
   }
 }

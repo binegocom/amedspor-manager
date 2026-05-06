@@ -1,9 +1,5 @@
-import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
-import '../../../../data/repositories/user_repository.dart';
-import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -51,13 +47,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0E0E0E), Color(0xFF0F6A3D)],
+            colors: [AppColors.darkBackground, Color(0xFF0F3A24)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -66,19 +62,18 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             children: [
               const Spacer(),
-
               Container(
-                width: 132,
-                height: 132,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF1A1A1A),
-                  border: Border.all(color: const Color(0xFFE53935), width: 3),
+                  color: AppColors.surface,
+                  border: Border.all(color: AppColors.primaryRed, width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFE53935).withValues(alpha: 0.35),
-                      blurRadius: 32,
-                      spreadRadius: 4,
+                      color: AppColors.primaryRed.withValues(alpha: 0.2),
+                      blurRadius: 40,
+                      spreadRadius: 10,
                     ),
                   ],
                 ),
@@ -87,49 +82,32 @@ class _SplashScreenState extends State<SplashScreen> {
                     'A',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 64,
+                      fontSize: 72,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 32),
               const Text(
                 'AMEDSPOR',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                ),
+                style: AppTextStyles.h1,
               ),
-
-              const SizedBox(height: 8),
-
+              const SizedBox(height: 12),
               const Text(
-                'Dijital Tribün',
-                style: TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+                'Bir Kulüpten Daha Fazlası',
+                style: AppTextStyles.bodyMedium,
               ),
-
               const Spacer(),
-
               const SizedBox(
-                width: 34,
-                height: 34,
+                width: 28,
+                height: 28,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  color: Color(0xFFE53935),
-                  backgroundColor: Color(0xFF1A1A1A),
+                  color: AppColors.primaryRed,
                 ),
               ),
-
-              const SizedBox(height: 48),
+              const SizedBox(height: 64),
             ],
           ),
         ),

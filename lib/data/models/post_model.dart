@@ -7,6 +7,7 @@ class PostModel {
   final String category;
   final int likes;
   final int commentsCount;
+  final String lineupId;
   final DateTime createdAt;
 
   const PostModel({
@@ -18,6 +19,7 @@ class PostModel {
     required this.category,
     required this.likes,
     required this.commentsCount,
+    required this.lineupId,
     required this.createdAt,
   });
 
@@ -31,6 +33,7 @@ class PostModel {
       category: map['category'] ?? '',
       likes: map['likes'] ?? 0,
       commentsCount: map['commentsCount'] ?? 0,
+      lineupId: map['lineupId'] ?? '',
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
@@ -44,6 +47,7 @@ class PostModel {
       'category': category,
       'likes': likes,
       'commentsCount': commentsCount,
+      'lineupId': lineupId,
       'createdAt': createdAt.toIso8601String(),
     };
   }

@@ -72,4 +72,14 @@ class PostRepository {
       'likes': FieldValue.increment(liked ? 1 : -1),
     });
   }
+
+  Future<void> createLineupPost({
+    required PostModel post,
+    required String lineupId,
+  }) async {
+    await firestoreService.posts.doc(post.id).set({
+      ...post.toMap(),
+      'lineupId': lineupId,
+    });
+  }
 }

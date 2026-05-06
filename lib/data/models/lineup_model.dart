@@ -5,6 +5,8 @@ class LineupModel {
   final String formation;
   final List<Map<String, dynamic>> players;
   final int likes;
+  final int power;
+  final int commentsCount;
   final DateTime createdAt;
 
   const LineupModel({
@@ -14,6 +16,8 @@ class LineupModel {
     required this.formation,
     required this.players,
     required this.likes,
+    required this.power,
+    required this.commentsCount,
     required this.createdAt,
   });
 
@@ -25,6 +29,8 @@ class LineupModel {
       formation: map['formation'] ?? '4-3-3',
       players: List<Map<String, dynamic>>.from(map['players'] ?? []),
       likes: map['likes'] ?? 0,
+      power: map['power'] ?? 0,
+      commentsCount: map['commentsCount'] ?? 0,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
@@ -36,6 +42,8 @@ class LineupModel {
       'formation': formation,
       'players': players,
       'likes': likes,
+      'power': power,
+      'commentsCount': commentsCount,
       'createdAt': createdAt.toIso8601String(),
     };
   }

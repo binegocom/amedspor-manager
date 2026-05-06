@@ -122,14 +122,21 @@ class _AdminChatRoomsScreenState extends State<AdminChatRoomsScreen> {
     if (confirm != true) return;
 
     try {
-      final snapshot = await firestoreService.messages(roomId).limit(100).get();
-      final batch = firestoreService.chatRooms.firestore.batch();
+      bool hasMore = true;
+      while (hasMore) {
+        final snapshot = await firestoreService.messages(roomId).limit(500).get();
+        
+        if (snapshot.docs.isEmpty) {
+          hasMore = false;
+          break;
+        }
 
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
+        final batch = firestoreService.chatRooms.firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
       }
-
-      await batch.commit();
 
       if (!mounted) return;
 

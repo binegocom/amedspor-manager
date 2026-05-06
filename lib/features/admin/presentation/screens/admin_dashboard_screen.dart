@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/app_card.dart';
 import '../widgets/admin_layout.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -9,37 +12,44 @@ class AdminDashboardScreen extends StatelessWidget {
 
   static const String routePath = '/admin/dashboard';
 
-  static void showUnavailable(BuildContext context, String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFFE53935),
-        content: Text('$title modulu bu surumde aktif degil.'),
-      ),
-    );
-  }
+  static Map<String, int>? _cachedStats;
+  static DateTime? _lastFetchTime;
+  static const Duration _cacheExpiration = Duration(minutes: 5);
 
-  Stream<Map<String, int>> _watchStats() {
-    final db = FirebaseFirestore.instance;
+  Stream<Map<String, int>> _watchStats() async* {
+    final now = DateTime.now();
+    final hasValidCache = _cachedStats != null &&
+        _lastFetchTime != null &&
+        now.difference(_lastFetchTime!) < _cacheExpiration;
 
-    return db.collection('users').snapshots().asyncMap((usersSnapshot) async {
-      final matchesSnapshot = await db.collection('matches').get();
-      final postsSnapshot = await db.collection('posts').get();
-      final reportsSnapshot = await db.collection('reports').get();
-      final predictionsSnapshot = await db.collection('predictions').get();
+    if (_cachedStats != null) yield _cachedStats!;
+    if (hasValidCache) return;
 
-      return {
-        'users': usersSnapshot.docs.length,
-        'matches': matchesSnapshot.docs.length,
-        'posts': postsSnapshot.docs.length,
-        'reports': reportsSnapshot.docs.length,
-        'predictions': predictionsSnapshot.docs.length,
+    try {
+      final db = FirebaseFirestore.instance;
+      final usersCount = await db.collection('users').count().get();
+      final matchesCount = await db.collection('matches').count().get();
+      final postsCount = await db.collection('posts').count().get();
+      final reportsCount = await db.collection('reports').count().get();
+
+      _cachedStats = {
+        'users': usersCount.count ?? 0,
+        'matches': matchesCount.count ?? 0,
+        'posts': postsCount.count ?? 0,
+        'reports': reportsCount.count ?? 0,
       };
-    });
+      _lastFetchTime = now;
+      yield _cachedStats!;
+    } catch (e) {
+      if (_cachedStats == null) {
+        yield {'users': 0, 'matches': 0, 'posts': 0, 'reports': 0};
+      }
+    }
   }
 
-  int _gridColumns(double width, {required int desktop, int tablet = 2}) {
-    if (width >= 1200) return desktop;
-    if (width >= 640) return tablet;
+  int _gridColumns(double width) {
+    if (width >= 1400) return 4;
+    if (width >= 900) return 2;
     return 1;
   }
 
@@ -47,215 +57,59 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AdminLayout(
       activeRoute: AdminDashboardScreen.routePath,
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: ListView(
-          children: [
-            const Text(
-              'Admin Dashboard',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Amedspor platform yönetim merkezi',
-              style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 16),
-            ),
-            const SizedBox(height: 28),
-
-            StreamBuilder<Map<String, int>>(
-              stream: _watchStats(),
-              builder: (context, snapshot) {
-                final stats =
-                    snapshot.data ??
-                    {
-                      'users': 0,
-                      'matches': 0,
-                      'posts': 0,
-                      'reports': 0,
-                      'predictions': 0,
-                    };
-
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = _gridColumns(
-                      constraints.maxWidth,
-                      desktop: 5,
-                    );
-
-                    return GridView.count(
-                      crossAxisCount: columns,
-                      shrinkWrap: true,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: columns == 1 ? 2.2 : 1.35,
-                      children: [
-                        _StatCard(
-                          icon: Icons.people_rounded,
-                          title: 'Kullanıcı',
-                          value: (stats['users'] ?? 0).toString(),
-                          subtitle: 'Toplam kullanıcı',
-                        ),
-                        _StatCard(
-                          icon: Icons.sports_soccer_rounded,
-                          title: 'Maç',
-                          value: (stats['matches'] ?? 0).toString(),
-                          subtitle: 'Toplam maç',
-                        ),
-                        _StatCard(
-                          icon: Icons.article_rounded,
-                          title: 'Post',
-                          value: (stats['posts'] ?? 0).toString(),
-                          subtitle: 'Toplam paylaşım',
-                        ),
-                        _StatCard(
-                          icon: Icons.report_rounded,
-                          title: 'Rapor',
-                          value: (stats['reports'] ?? 0).toString(),
-                          subtitle: 'Toplam rapor',
-                        ),
-                        _StatCard(
-                          icon: Icons.emoji_events_rounded,
-                          title: 'Tahmin',
-                          value: (stats['predictions'] ?? 0).toString(),
-                          subtitle: 'Toplam tahmin',
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 28),
-
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = _gridColumns(constraints.maxWidth, desktop: 4);
-
-                return GridView.count(
-                  crossAxisCount: columns,
-                  shrinkWrap: true,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: columns == 1 ? 2.45 : 1.45,
-                  children: [
-                    _DashboardCard(
-                      icon: Icons.sports_soccer_rounded,
-                      title: 'Maç Yönetimi',
-                      subtitle: 'Maç ekle, düzenle, skor gir',
-                      onTap: () => context.go('/admin/matches'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.people_rounded,
-                      title: 'Kullanıcılar',
-                      subtitle: 'Kullanıcıları ve rolleri yönet',
-                      onTap: () => context.go('/admin/users'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.article_rounded,
-                      title: 'Postlar',
-                      subtitle: 'Paylaşımları incele ve yönet',
-                      onTap: () => context.go('/admin/posts'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.report_rounded,
-                      title: 'Raporlar',
-                      subtitle: 'Şikayetleri ve moderasyonu yönet',
-                      onTap: () => context.go('/admin/reports'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.notifications_rounded,
-                      title: 'Bildirim Gönder',
-                      subtitle: 'Kullanıcılara duyuru gönder',
-                      onTap: () => context.go('/admin/notifications'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.forum_rounded,
-                      title: 'Sohbet Odaları',
-                      subtitle: 'Odaları ve mesajları yönet',
-                      onTap: () => context.go('/admin/chats'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.emoji_events_rounded,
-                      title: 'Tahminler',
-                      subtitle: 'Puan ve sonuç yönetimi',
-                      onTap: () => context.go('/admin/predictions'),
-                    ),
-                    _DashboardCard(
-                      icon: Icons.settings_rounded,
-                      title: 'Ayarlar',
-                      subtitle: 'Platform ayarları',
-                      onTap: () => context.go('/admin/settings'),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final String subtitle;
-
-  const _StatCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
+        padding: const EdgeInsets.all(32),
         children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: const Color(0xFF0F6A3D),
-            child: Icon(icon, color: Colors.white),
+          const Text('Admin Dashboard', style: AppTextStyles.h1),
+          const SizedBox(height: 8),
+          const Text('Platform yönetim ve istatistik merkezi', style: AppTextStyles.body),
+          const SizedBox(height: 40),
+          StreamBuilder<Map<String, int>>(
+            stream: _watchStats(),
+            builder: (context, snapshot) {
+              final stats = snapshot.data ?? {'users': 0, 'matches': 0, 'posts': 0, 'reports': 0};
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final cols = _gridColumns(constraints.maxWidth);
+                  return GridView.count(
+                    crossAxisCount: cols,
+                    shrinkWrap: true,
+                    crossAxisSpacing: 24,
+                    mainAxisSpacing: 24,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 1.8,
+                    children: [
+                      _StatCard(title: 'Kullanıcılar', value: '${stats['users']}', icon: Icons.people_rounded, color: AppColors.primaryGreen),
+                      _StatCard(title: 'Aktif Maçlar', value: '${stats['matches']}', icon: Icons.sports_soccer_rounded, color: AppColors.primaryRed),
+                      _StatCard(title: 'Toplam Post', value: '${stats['posts']}', icon: Icons.feed_rounded, color: AppColors.gold),
+                      _StatCard(title: 'Raporlar', value: '${stats['reports']}', icon: Icons.report_rounded, color: AppColors.errorRed),
+                    ],
+                  );
+                },
+              );
+            },
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFFE53935),
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
+          const SizedBox(height: 48),
+          const Text('Hızlı İşlemler', style: AppTextStyles.h2),
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = _gridColumns(constraints.maxWidth);
+              return GridView.count(
+                crossAxisCount: cols,
+                shrinkWrap: true,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 24,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 1.5,
+                children: [
+                  _ActionCard(title: 'Maç Yönetimi', subtitle: 'Canlı skor ve etkinlik girişi', icon: Icons.stadium_rounded, onTap: () => context.go('/admin/matches')),
+                  _ActionCard(title: 'Oyuncu Havuzu', subtitle: 'Kadro kurma oyuncuları', icon: Icons.person_add_rounded, onTap: () => context.go('/admin/players')),
+                  _ActionCard(title: 'Moderasyon', subtitle: 'Raporlar ve içerik denetimi', icon: Icons.gavel_rounded, onTap: () => context.go('/admin/reports')),
+                  _ActionCard(title: 'Ayarlar', subtitle: 'Sistem ve uygulama ayarları', icon: Icons.settings_rounded, onTap: () => context.go('/admin/settings')),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -263,55 +117,61 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _DashboardCard extends StatelessWidget {
-  final IconData icon;
+class _StatCard extends StatelessWidget {
   final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _DashboardCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  final String value;
+  final IconData icon;
+  final Color color;
+  const _StatCard({required this.title, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
+    return AppCard(
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value, style: AppTextStyles.h1.copyWith(fontSize: 28)),
+                Text(title, style: AppTextStyles.label),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _ActionCard({required this.title, required this.subtitle, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: const Color(0xFFE53935),
-              child: Icon(icon, color: Colors.white),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.35),
-            ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.primaryRed, size: 32),
+          const SizedBox(height: 16),
+          Text(title, style: AppTextStyles.h3),
+          const SizedBox(height: 4),
+          Text(subtitle, style: AppTextStyles.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
       ),
     );
   }

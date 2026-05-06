@@ -4,37 +4,41 @@ import '../../core/theme/app_colors.dart';
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
+  final Color? color;
+  final double borderRadius;
+  final Border? border;
 
   const AppCard({
     super.key,
     required this.child,
     this.padding,
-    this.margin,
     this.onTap,
+    this.color,
+    this.borderRadius = 24,
+    this.border,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
-      width: double.infinity,
-      margin: margin,
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: child,
-    );
-
-    if (onTap == null) return card;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
+    return GestureDetector(
       onTap: onTap,
-      child: card,
+      child: Container(
+        padding: padding ?? const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color ?? AppColors.card,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: border ?? Border.all(color: AppColors.white.withValues(alpha: 0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: child,
+      ),
     );
   }
 }

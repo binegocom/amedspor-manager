@@ -70,6 +70,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       category: selectedCategory,
       likes: 0,
       commentsCount: 0,
+      lineupId: '',
       createdAt: DateTime.now(),
     );
 

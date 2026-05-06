@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const green = Color(0xFF0F6A3D);
-  static const red = Color(0xFFE53935);
+  static const Color primaryGreen = Color(0xFF0F6A3D);
+  static const Color primaryRed = Color(0xFFE53935);
+  static const Color darkBackground = Color(0xFF080C0A);
+  static const Color surface = Color(0xFF111713);
+  static const Color card = Color(0xFF172019);
+  static const Color softGreen = Color(0xFF143D2A);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color muted = Color(0xFFA7B3AA);
+  static const Color gold = Color(0xFFFFB300);
+  static const Color error = Color(0xFFE53935);
 
-  static const background = Color(0xFF0E0E0E);
-  static const surface = Color(0xFF111111);
-  static const card = Color(0xFF1A1A1A);
+  // Gradient definitions
+  static const LinearGradient backgroundGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [surface, darkBackground],
+  );
 
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFFB3B3B3);
-  static const textMuted = Color(0xFF777777);
-
-  static const border = Colors.white10;
-  static const warning = Color(0xFFFFB300);
-  static const blue = Color(0xFF2E7DFF);
-
-  static const lightBackground = Color(0xFFF6F7F8);
-  static const lightSurface = Color(0xFFFFFFFF);
-  static const lightCard = Color(0xFFFFFFFF);
-  static const lightTextPrimary = Color(0xFF151515);
-  static const lightTextSecondary = Color(0xFF4F5965);
-  static const lightTextMuted = Color(0xFF7B8490);
-  static const lightBorder = Color(0xFFE1E5EA);
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [card, surface],
+  );
 }

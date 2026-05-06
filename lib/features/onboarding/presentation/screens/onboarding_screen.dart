@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/app_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,18 +22,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<_OnboardingItem> _items = const [
     _OnboardingItem(
       title: 'Kadro Kur',
-      description: 'Haftanın maçına göre kendi ilk 11’ini oluştur.',
-      icon: Icons.sports_soccer,
+      description: 'Haftanın maçına göre kendi ilk 11’ini oluştur, puanları topla.',
+      icon: Icons.groups_rounded,
     ),
     _OnboardingItem(
-      title: 'Tribüne Katıl',
-      description: 'Amedspor taraftarlarıyla sohbet et, maç heyecanını paylaş.',
+      title: 'Canlı Maç',
+      description: 'Amedspor maçlarını anlık skor ve olaylarla canlı takip et.',
+      icon: Icons.sports_soccer_rounded,
+    ),
+    _OnboardingItem(
+      title: 'Taraftar Sohbeti',
+      description: 'Maç heyecanını diğer taraftarlarla anlık sohbette paylaş.',
       icon: Icons.forum_rounded,
-    ),
-    _OnboardingItem(
-      title: 'Tahmin Yap',
-      description: 'Skoru bil, puan kazan, liderlikte yüksel.',
-      icon: Icons.emoji_events_rounded,
     ),
   ];
 
@@ -56,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -66,11 +69,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 onPressed: _skip,
                 child: const Text(
                   'Atla',
-                  style: TextStyle(color: Color(0xFFB3B3B3)),
+                  style: TextStyle(color: AppColors.muted),
                 ),
               ),
             ),
-
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -82,59 +84,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   final item = _items[index];
 
                   return Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(32),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 180,
-                          height: 180,
+                          width: 200,
+                          height: 200,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF1A1A1A),
+                            color: AppColors.surface,
                             border: Border.all(
-                              color: const Color(0xFF0F6A3D),
+                              color: AppColors.primaryGreen,
                               width: 3,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(
-                                  0xFF0F6A3D,
-                                ).withValues(alpha: 0.35),
-                                blurRadius: 36,
-                                spreadRadius: 4,
+                                color: AppColors.primaryGreen.withValues(alpha: 0.15),
+                                blurRadius: 40,
+                                spreadRadius: 5,
                               ),
                             ],
                           ),
                           child: Icon(
                             item.icon,
-                            color: const Color(0xFFE53935),
-                            size: 82,
+                            color: AppColors.white,
+                            size: 90,
                           ),
                         ),
-
-                        const SizedBox(height: 42),
-
+                        const SizedBox(height: 48),
                         Text(
                           item.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: AppTextStyles.h1,
                         ),
-
-                        const SizedBox(height: 14),
-
+                        const SizedBox(height: 16),
                         Text(
                           item.description,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFFB3B3B3),
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
+                          style: AppTextStyles.bodyMedium,
                         ),
                       ],
                     ),
@@ -142,7 +130,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -150,46 +137,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 5),
-                  width: _currentPage == index ? 26 : 8,
+                  width: _currentPage == index ? 24 : 8,
                   height: 8,
                   decoration: BoxDecoration(
                     color: _currentPage == index
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF333333),
+                        ? AppColors.primaryRed
+                        : AppColors.muted.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 28),
-
+            const SizedBox(height: 32),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _next,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    _currentPage == _items.length - 1 ? 'Başla' : 'Devam',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
+              child: AppButton(
+                text: _currentPage == _items.length - 1 ? 'BAŞLA' : 'DEVAM ET',
+                onTap: _next,
+                type: _currentPage == _items.length - 1 ? AppButtonType.primary : AppButtonType.secondary,
               ),
             ),
-
-            const SizedBox(height: 28),
+            const SizedBox(height: 32),
           ],
         ),
       ),

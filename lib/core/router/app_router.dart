@@ -27,7 +27,12 @@ import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/leaderboard/presentation/screens/leaderboard_screen.dart';
 
 import '../../features/lineup/presentation/screens/lineup_builder_screen.dart';
+import '../../features/lineup/presentation/screens/lineup_comments_screen.dart';
+import '../../features/lineup/presentation/screens/lineup_detail_screen.dart';
+import '../../features/lineup/presentation/screens/lineup_rating_result_screen.dart';
 import '../../features/lineup/presentation/screens/my_lineups_screen.dart';
+import '../../features/lineup/presentation/screens/top_lineups_screen.dart';
+import '../../features/lineup/presentation/screens/weekly_best_lineups_screen.dart';
 
 import '../../features/matches/presentation/screens/matches_screen.dart';
 
@@ -52,6 +57,11 @@ import '../../features/settings/presentation/screens/policy_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 
 import '../../features/splash/presentation/screens/splash_screen.dart';
+
+import '../../features/admin/presentation/screens/admin_players_screen.dart';
+import '../../features/match/presentation/screens/live_match_center_screen.dart';
+import '../../features/admin/presentation/screens/admin_live_match_screen.dart';
+import '../../features/lineup/presentation/screens/admin_lineups_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -96,6 +106,11 @@ final appRouter = GoRouter(
       builder: (context, state) => const OnboardingScreen(),
     ),
 
+    GoRoute(
+      path: AdminPlayersScreen.routePath,
+      builder: (context, state) => const AdminPlayersScreen(),
+    ),
+
     /// Login
     GoRoute(
       path: LoginScreen.routePath,
@@ -133,6 +148,49 @@ final appRouter = GoRouter(
     GoRoute(
       path: MyLineupsScreen.routePath,
       builder: (context, state) => const MyLineupsScreen(),
+    ),
+
+    /// Lineup Result
+    GoRoute(
+      path: LineupRatingResultScreen.routePath,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return LineupRatingResultScreen(
+          score: extra['score'] ?? 0,
+          pointsEarned: extra['pointsEarned'] ?? 0,
+          matchId: extra['matchId'] ?? '',
+        );
+      },
+    ),
+
+    /// Weekly Best Lineups
+    GoRoute(
+      path: WeeklyBestLineupsScreen.routePath,
+      builder: (context, state) => const WeeklyBestLineupsScreen(),
+    ),
+
+    /// Top Lineups
+    GoRoute(
+      path: TopLineupsScreen.routePath,
+      builder: (context, state) => const TopLineupsScreen(),
+    ),
+
+    /// Lineup Detail
+    GoRoute(
+      path: LineupDetailScreen.routePath,
+      builder: (context, state) {
+        final lineupId = state.pathParameters['lineupId'] ?? '';
+        return LineupDetailScreen(lineupId: lineupId);
+      },
+    ),
+
+    /// Lineup Comments
+    GoRoute(
+      path: LineupCommentsScreen.routePath,
+      builder: (context, state) {
+        final lineupId = state.pathParameters['lineupId'] ?? '';
+        return LineupCommentsScreen(lineupId: lineupId);
+      },
     ),
 
     /// Chat
@@ -317,10 +375,34 @@ final appRouter = GoRouter(
       builder: (context, state) => const AdminPredictionsScreen(),
     ),
 
+    /// Admin Lineups
+    GoRoute(
+      path: AdminLineupsScreen.routePath,
+      builder: (context, state) => const AdminLineupsScreen(),
+    ),
+
+    /// Admin Live Match
+    GoRoute(
+      path: AdminLiveMatchScreen.routePath,
+      builder: (context, state) {
+        final matchId = state.pathParameters['matchId'] ?? '';
+        return AdminLiveMatchScreen(matchId: matchId);
+      },
+    ),
+
     /// Admin Settings
     GoRoute(
       path: AdminSettingsScreen.routePath,
       builder: (context, state) => const AdminSettingsScreen(),
+    ),
+
+    /// Live Match Center
+    GoRoute(
+      path: LiveMatchCenterScreen.routePath,
+      builder: (context, state) {
+        final matchId = state.pathParameters['matchId'] ?? '';
+        return LiveMatchCenterScreen(matchId: matchId);
+      },
     ),
   ],
 );

@@ -1,10 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MatchModel {
   final String id;
   final String homeTeam;
   final String awayTeam;
   final DateTime matchDate;
   final String status;
-  final String score;
+  final int homeScore;
+  final int awayScore;
+  final int minute;
+  final List<String> motmCandidates;
+  final bool isMotmVotingActive;
+  final Map<String, int> motmResults;
 
   const MatchModel({
     required this.id,
@@ -12,8 +19,18 @@ class MatchModel {
     required this.awayTeam,
     required this.matchDate,
     required this.status,
-    required this.score,
+    required this.homeScore,
+    required this.awayScore,
+    required this.minute,
+    this.motmCandidates = const [],
+    this.isMotmVotingActive = false,
+    this.motmResults = const {},
   });
+
+  factory MatchModel.fromFirestore(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>? ?? {};
+    return MatchModel.fromMap(doc.id, map);
+  }
 
   factory MatchModel.fromMap(String id, Map<String, dynamic> map) {
     return MatchModel(
@@ -22,7 +39,12 @@ class MatchModel {
       awayTeam: map['awayTeam'] ?? '',
       matchDate: DateTime.tryParse(map['matchDate'] ?? '') ?? DateTime.now(),
       status: map['status'] ?? 'upcoming',
-      score: map['score'] ?? '',
+      homeScore: map['homeScore'] ?? 0,
+      awayScore: map['awayScore'] ?? 0,
+      minute: map['minute'] ?? 0,
+      motmCandidates: List<String>.from(map['motmCandidates'] ?? []),
+      isMotmVotingActive: map['isMotmVotingActive'] ?? false,
+      motmResults: Map<String, int>.from(map['motmResults'] ?? {}),
     );
   }
 
@@ -32,7 +54,12 @@ class MatchModel {
       'awayTeam': awayTeam,
       'matchDate': matchDate.toIso8601String(),
       'status': status,
-      'score': score,
+      'homeScore': homeScore,
+      'awayScore': awayScore,
+      'minute': minute,
+      'motmCandidates': motmCandidates,
+      'isMotmVotingActive': isMotmVotingActive,
+      'motmResults': motmResults,
     };
   }
 }

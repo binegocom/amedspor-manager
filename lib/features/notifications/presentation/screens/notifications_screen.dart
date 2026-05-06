@@ -43,6 +43,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.chat_bubble_rounded;
       case 'prediction':
         return Icons.emoji_events_rounded;
+      case 'lineup':
+        return Icons.groups_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -57,6 +59,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'comment':
         return const Color(0xFF2E7DFF);
       case 'prediction':
+        return const Color(0xFFFFB300);
+      case 'lineup':
         return const Color(0xFFFFB300);
       default:
         return const Color(0xFFB3B3B3);

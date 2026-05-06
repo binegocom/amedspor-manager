@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -21,19 +18,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingItem> _items = const [
     _OnboardingItem(
-      title: 'Kadro Kur',
-      description: 'Haftanın maçına göre kendi ilk 11’ini oluştur, puanları topla.',
+      title: 'TAKIMINI KUR\nSTRATEJİNİ BELİRLE\nZAFERE ULAŞ!',
+      description: 'Amedspor’un başına geç, kendi hikayeni yazmaya başla.',
+      icon: Icons.stadium_rounded,
+      image: 'assets/images/onboarding_1.png',
+    ),
+    _OnboardingItem(
+      title: 'KULÜBÜNÜ YÖNET',
+      description: 'Transferleri yap, kadronu güçlendir ve takımını şampiyonluğa taşı.',
       icon: Icons.groups_rounded,
+      image: 'assets/images/onboarding_2.png',
     ),
     _OnboardingItem(
-      title: 'Canlı Maç',
-      description: 'Amedspor maçlarını anlık skor ve olaylarla canlı takip et.',
-      icon: Icons.sports_soccer_rounded,
-    ),
-    _OnboardingItem(
-      title: 'Taraftar Sohbeti',
-      description: 'Maç heyecanını diğer taraftarlarla anlık sohbette paylaş.',
-      icon: Icons.forum_rounded,
+      title: 'TAKTİĞİNİ OLUŞTUR',
+      description: 'Formasyonunu seç, taktiklerini belirle ve rakiplerine üstünlük kur.',
+      icon: Icons.psychology_rounded,
+      image: 'assets/images/onboarding_3.png',
     ),
   ];
 
@@ -44,122 +44,88 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       context.go('/home');
     } else {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
 
-  Future<void> _skip() async {
-    await appStateService.setOnboardingCompleted();
-    if (!mounted) return;
-    context.go('/home');
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _skip,
-                child: const Text(
-                  'Atla',
-                  style: TextStyle(color: AppColors.muted),
-                ),
-              ),
-            ),
-            Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                itemCount: _items.length,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                itemBuilder: (context, index) {
-                  final item = _items[index];
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Main Interactive Area
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _next,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: _items.length,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
+              },
+              itemBuilder: (context, index) {
+                final item = _items[index];
 
-                  return Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 200,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.surface,
-                            border: Border.all(
-                              color: AppColors.primaryGreen,
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryGreen.withValues(alpha: 0.15),
-                                blurRadius: 40,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            item.icon,
-                            color: AppColors.white,
-                            size: 90,
-                          ),
+                return Stack(
+                  children: [
+                    // Image Background (Original Quality)
+                    Container(
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage(item.image),
+                          fit: BoxFit.cover,
                         ),
-                        const SizedBox(height: 48),
-                        Text(
-                          item.title,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.h1,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          item.description,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                      ],
+                      ),
                     ),
-                  );
-                },
-              ),
+
+                    const SafeArea(
+                      child: Column(
+                        children: [
+                          Spacer(),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _items.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                  width: _currentPage == index ? 24 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _currentPage == index
-                        ? AppColors.primaryRed
-                        : AppColors.muted.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(99),
+          ),
+
+          // Bottom Indicators
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                // Indicators
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _items.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: _currentPage == index ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _currentPage == index
+                            ? const Color(0xFF0F6A3D)
+                            : Colors.white24,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 32),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: AppButton(
-                text: _currentPage == _items.length - 1 ? 'BAŞLA' : 'DEVAM ET',
-                onTap: _next,
-                type: _currentPage == _items.length - 1 ? AppButtonType.primary : AppButtonType.secondary,
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -169,10 +135,12 @@ class _OnboardingItem {
   final String title;
   final String description;
   final IconData icon;
+  final String image;
 
   const _OnboardingItem({
     required this.title,
     required this.description,
     required this.icon,
+    required this.image,
   });
 }

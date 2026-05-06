@@ -293,6 +293,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle: 'Uygulama bilgileri ve sürüm',
                       onTap: () => context.go('/about'),
                     ),
+                    _SettingsTile(
+                      icon: Icons.feedback_rounded,
+                      title: 'Geri Bildirim',
+                      subtitle: 'Hata bildir veya öneri gönder',
+                      onTap: () => context.push('/feedback'),
+                    ),
                     const SizedBox(height: 22),
                     const _SectionTitle(title: 'Güvenlik'),
                     const SizedBox(height: 12),
@@ -303,10 +309,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () => context.go('/reports'),
                     ),
                     _SettingsTile(
+                      icon: Icons.person_off_rounded,
+                      title: 'Engellenen Kişiler',
+                      subtitle: 'Engellediğin kullanıcıları yönet',
+                      onTap: () => context.push('/blocked-users'),
+                    ),
+                    _SettingsTile(
                       icon: Icons.privacy_tip_rounded,
                       title: 'Gizlilik ve Kullanım Şartları',
                       subtitle: 'Platform kuralları',
                       onTap: () => context.go('/policy'),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.no_accounts_rounded,
+                      title: 'Hesabımı Sil',
+                      subtitle: 'Hesabını ve verilerini kalıcı olarak sil',
+                      onTap: () => context.push('/delete-account'),
                     ),
                     const SizedBox(height: 28),
                     SizedBox(

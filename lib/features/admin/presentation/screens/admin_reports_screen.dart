@@ -91,6 +91,20 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         await firestoreService.posts.doc(report.targetId).delete();
       }
 
+      if (report.targetType == 'comment') {
+        // Find comment in posts or lineups
+        await _deleteCommentFromAll(report.targetId);
+      }
+
+      if (report.targetType == 'lineup') {
+        await firestoreService.lineups.doc(report.targetId).delete();
+      }
+
+      if (report.targetType == 'chatMessage') {
+        // Requires roomId in report metadata or searching
+        // For now, simple placeholder if roomId not available
+      }
+
       if (report.targetType == 'user') {
         await firestoreService.users.doc(report.targetId).update({
           'disabled': true,

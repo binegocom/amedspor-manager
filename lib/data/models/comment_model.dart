@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CommentModel {
   final String id;
   final String postId;
@@ -22,7 +24,7 @@ class CommentModel {
       userId: map['userId'] ?? '',
       username: map['username'] ?? '',
       text: map['text'] ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: _parseDate(map['createdAt']),
     );
   }
 
@@ -34,5 +36,15 @@ class CommentModel {
       'text': text,
       'createdAt': createdAt.toIso8601String(),
     };
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    } else {
+      return DateTime.now();
+    }
   }
 }

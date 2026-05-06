@@ -46,7 +46,7 @@ class MatchModel {
       awayTeam: map['awayTeam'] ?? '',
       homeLogo: map['homeLogo'] ?? '',
       awayLogo: map['awayLogo'] ?? '',
-      matchDate: DateTime.tryParse(map['matchDate'] ?? '') ?? DateTime.now(),
+      matchDate: _parseDate(map['matchDate']),
       status: map['status'] ?? 'upcoming',
       homeScore: map['homeScore'] ?? 0,
       awayScore: map['awayScore'] ?? 0,
@@ -72,5 +72,15 @@ class MatchModel {
       'isMotmVotingActive': isMotmVotingActive,
       'motmResults': motmResults,
     };
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    } else {
+      return DateTime.now();
+    }
   }
 }

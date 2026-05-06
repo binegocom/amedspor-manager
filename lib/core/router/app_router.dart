@@ -15,7 +15,11 @@ import '../../features/admin/presentation/screens/admin_send_notification_screen
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/admin/presentation/screens/admin_players_screen.dart';
+import '../../features/admin/presentation/screens/admin_lineups_screen.dart';
 import '../../features/admin/presentation/screens/admin_live_match_screen.dart';
+import '../../features/admin/presentation/screens/admin_questions_screen.dart';
+import '../../features/admin/presentation/screens/admin_errors_screen.dart';
+import '../../features/admin/presentation/screens/admin_audit_logs_screen.dart';
 
 // Auth Screens
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -23,6 +27,9 @@ import '../../features/auth/presentation/screens/profile_setup_screen.dart';
 
 // Feature Screens
 import '../../features/chat/presentation/screens/chat_screen.dart';
+import '../../features/feedback/presentation/screens/feedback_screen.dart';
+import '../../features/account/presentation/screens/delete_account_screen.dart';
+import '../../features/blocking/presentation/screens/blocked_users_screen.dart';
 import '../../features/feed/presentation/screens/create_post_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_detail_screen.dart';
@@ -47,6 +54,7 @@ import '../../features/settings/presentation/screens/about_screen.dart';
 import '../../features/settings/presentation/screens/policy_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../analytics/analytics_service.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,6 +72,7 @@ final List<String> authRequiredRoutes = [
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
+  observers: [AnalyticsService.observer],
   redirect: (context, state) async {
     final bool isAdminRoute = state.matchedLocation.startsWith('/admin');
     final bool isAuthRequired = authRequiredRoutes.any((r) => state.matchedLocation.startsWith(r));
@@ -236,6 +245,18 @@ final appRouter = GoRouter(
       path: '/about',
       builder: (context, state) => const AboutScreen(),
     ),
+    GoRoute(
+      path: '/feedback',
+      builder: (context, state) => const FeedbackScreen(),
+    ),
+    GoRoute(
+      path: '/delete-account',
+      builder: (context, state) => const DeleteAccountScreen(),
+    ),
+    GoRoute(
+      path: '/blocked-users',
+      builder: (context, state) => const BlockedUsersScreen(),
+    ),
 
     // ADMIN ROUTES
     GoRoute(
@@ -267,6 +288,10 @@ final appRouter = GoRouter(
       builder: (context, state) => const AdminPlayersScreen(),
     ),
     GoRoute(
+      path: '/admin/lineups',
+      builder: (context, state) => const AdminLineupsScreen(),
+    ),
+    GoRoute(
       path: '/admin/users',
       builder: (context, state) => const AdminUsersScreen(),
     ),
@@ -293,6 +318,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/admin/settings',
       builder: (context, state) => const AdminSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/questions',
+      builder: (context, state) => const AdminQuestionsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/errors',
+      builder: (context, state) => const AdminErrorsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/audit-logs',
+      builder: (context, state) => const AdminAuditLogsScreen(),
     ),
   ],
 );

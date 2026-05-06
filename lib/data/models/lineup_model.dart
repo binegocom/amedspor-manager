@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class LineupModel {
   final String id;
   final String userId;
@@ -31,7 +33,7 @@ class LineupModel {
       likes: map['likes'] ?? 0,
       power: map['power'] ?? 0,
       commentsCount: map['commentsCount'] ?? 0,
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: _parseDate(map['createdAt']),
     );
   }
 
@@ -46,5 +48,15 @@ class LineupModel {
       'commentsCount': commentsCount,
       'createdAt': createdAt.toIso8601String(),
     };
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    } else {
+      return DateTime.now();
+    }
   }
 }

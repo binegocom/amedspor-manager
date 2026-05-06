@@ -251,12 +251,22 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                                   contentPadding: EdgeInsets.all(18),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'upcoming', child: Text('Başlamadı')),
-                                  DropdownMenuItem(value: 'live', child: Text('Canlı')),
-                                  DropdownMenuItem(value: 'finished', child: Text('Bitti')),
+                                  DropdownMenuItem(
+                                    value: 'upcoming',
+                                    child: Text('Başlamadı'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'live',
+                                    child: Text('Canlı'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'finished',
+                                    child: Text('Bitti'),
+                                  ),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null) setState(() => selectedStatus = val);
+                                  if (val != null)
+                                    setState(() => selectedStatus = val);
                                 },
                               ),
                               const SizedBox(height: 32),
@@ -273,7 +283,8 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'Maçın Adamı Oylaması',

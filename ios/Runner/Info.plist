@@ -59,6 +59,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Profil resmi ve post paylasimi icin galeri erisimi gereklidir.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Profil resmi ve post paylasimi icin kamera erisimi gereklidir.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Video paylasimi durumunda mikrofon erisimi gereklidir.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>mailto</string>
+		<string>tel</string>
+	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

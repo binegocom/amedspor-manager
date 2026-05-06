@@ -61,7 +61,7 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      initialValue: position,
+                      value: position,
                       dropdownColor: AppColors.surface,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(

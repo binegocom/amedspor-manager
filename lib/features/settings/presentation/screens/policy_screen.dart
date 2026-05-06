@@ -26,24 +26,24 @@ class PolicyScreen extends StatelessWidget {
                         'Küfür, hakaret, tehdit, hedef gösterme, nefret söylemi ve provokatif içerikler platformda yasaktır. Taraftarlar arasında saygılı iletişim esastır.',
                   ),
                   _PolicySection(
-                    title: 'Gizlilik',
+                    title: 'KVKK ve Veri Gizliliği',
                     text:
-                        'Kullanıcı bilgileri uygulama deneyimini geliştirmek için kullanılır. Email, kullanıcı adı ve profil bilgileri izinsiz şekilde üçüncü kişilerle paylaşılmaz.',
+                        '6698 sayılı KVKK kapsamında, kişisel verileriniz (e-posta, kullanıcı adı) sadece uygulama deneyimini geliştirmek ve güvenliği sağlamak amacıyla işlenir. Verileriniz izniniz olmadan üçüncü taraflarla paylaşılmaz.',
+                  ),
+                  _PolicySection(
+                    title: 'Hesap Silme ve Veri Hakkı',
+                    text:
+                        'Kullanıcılarımız istedikleri zaman Ayarlar > Hesabımı Sil menüsünden hesaplarını ve tüm ilişkili verilerini kalıcı olarak silebilirler. Veri taşınabilirliği hakkınız için destek ekibimizle iletişime geçebilirsiniz.',
                   ),
                   _PolicySection(
                     title: 'İçerik Sorumluluğu',
                     text:
-                        'Kullanıcıların paylaştığı yorum, kadro, tahmin ve postlardan kullanıcıların kendisi sorumludur. Kurallara aykırı içerikler kaldırılabilir.',
+                        'Kullanıcıların paylaştığı yorum, kadro, tahmin ve postlardan kullanıcıların kendisi sorumludur. Kurallara aykırı içerikler moderasyon tarafından kaldırılabilir.',
                   ),
                   _PolicySection(
-                    title: 'Raporlama ve Moderasyon',
+                    title: 'İletişim',
                     text:
-                        'Şikayet edilen içerikler moderasyon tarafından incelenir. Gerekli görülürse içerik silinebilir, kullanıcı susturulabilir veya hesap erişimi kısıtlanabilir.',
-                  ),
-                  _PolicySection(
-                    title: 'Tahmin ve Puan Sistemi',
-                    text:
-                        'Tahmin sistemi eğlence ve topluluk etkileşimi amacıyla kullanılır. Puanlar uygulama içi sıralama ve rozet sisteminde değerlendirilir.',
+                        'Politikalarımız hakkındaki sorularınız için uygulama içindeki Geri Bildirim sistemini kullanabilir veya amedspor.app@gmail.com adresinden bize ulaşabilirsiniz.',
                   ),
                 ],
               ),

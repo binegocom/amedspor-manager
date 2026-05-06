@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../data/services/firebase/firebase_providers.dart';
-import '../widgets/banned_screen.dart';
-import '../widgets/force_update_screen.dart';
-import '../widgets/maintenance_screen.dart';
+import '../../features/system/presentation/screens/account_disabled_screen.dart';
+import '../../features/system/presentation/screens/force_update_screen.dart';
+import '../../features/system/presentation/screens/maintenance_screen.dart';
 import '../widgets/offline_screen.dart';
 
 class GlobalAppGuard extends StatefulWidget {
@@ -74,16 +74,20 @@ class _GlobalAppGuardState extends State<GlobalAppGuard> {
           final data = doc.data();
           if (data == null) return;
 
-          setState(() {
-            _isBanned = data['disabled'] == true;
-            _isAdmin = data['role'] == 'admin' || data['role'] == 'moderator';
-          });
+          if (mounted) {
+            setState(() {
+              _isBanned = data['disabled'] == true;
+              _isAdmin = data['role'] == 'admin' || data['role'] == 'moderator';
+            });
+          }
         });
       } else {
-        setState(() {
-          _isBanned = false;
-          _isAdmin = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isBanned = false;
+            _isAdmin = false;
+          });
+        }
       }
     });
   }
@@ -94,15 +98,22 @@ class _GlobalAppGuardState extends State<GlobalAppGuard> {
       final data = doc.data();
       if (data == null) return;
 
-      setState(() {
-        _isMaintenanceMode = data['maintenanceMode'] == true;
-        final minVersion = data['minAppVersion'] as String?;
-        if (minVersion != null) {
+      if (mounted) {
+        setState(() {
+          _isMaintenanceMode = data['maintenanceMode'] == true;
+          
+          String minVersion = '0.0.0';
+          if (kIsWeb) {
+            minVersion = data['minimumWebVersion'] ?? '0.0.0';
+          } else if (Theme.of(context).platform == TargetPlatform.android) {
+            minVersion = data['minimumAndroidVersion'] ?? '0.0.0';
+          } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+            minVersion = data['minimumIosVersion'] ?? '0.0.0';
+          }
+
           _isForceUpdate = _shouldForceUpdate(_currentAppVersion, minVersion);
-        } else {
-          _isForceUpdate = false;
-        }
-      });
+        });
+      }
     });
   }
 
@@ -144,15 +155,11 @@ class _GlobalAppGuardState extends State<GlobalAppGuard> {
         if (_isOffline)
           const Positioned.fill(child: OfflineScreen())
         else if (_isBanned)
-          const Positioned.fill(child: BannedScreen())
+          const Positioned.fill(child: AccountDisabledScreen())
         else if (_isForceUpdate)
           const Positioned.fill(child: ForceUpdateScreen())
         else if (_isMaintenanceMode && !_isAdmin)
-          Positioned.fill(
-            child: MaintenanceScreen(
-              onAdminBypass: () => setState(() => _isAdmin = true), // Fallback locally if they manage to authenticate as admin
-            ),
-          ),
+          const Positioned.fill(child: MaintenanceScreen()),
       ],
     );
   }

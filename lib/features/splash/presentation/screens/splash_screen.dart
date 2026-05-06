@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,25 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
-    _navigationTimer = Timer(const Duration(seconds: 2), () async {
-      if (!mounted) return;
-
-      final user = authService.currentUser;
-
-      if (user != null) {
-        final appUser = await userRepository.getUser(user.uid);
-
-        if (!mounted) return;
-        context.go(appUser == null ? '/profile-setup' : '/home');
-        return;
-      }
-
-      final onboardingCompleted = await appStateService.isOnboardingCompleted();
-
-      if (!mounted) return;
-      context.go(onboardingCompleted ? '/home' : '/onboarding');
-    });
+    _navigationTimer = Timer(const Duration(seconds: 3), _navigateToNext);
   }
 
   @override
@@ -49,70 +29,81 @@ class _SplashScreenState extends State<SplashScreen> {
     super.dispose();
   }
 
+  void _onTap() {
+    _navigationTimer?.cancel();
+    _navigateToNext();
+  }
+
+  Future<void> _navigateToNext() async {
+    if (!mounted) return;
+
+    final onboardingCompleted = await appStateService.isOnboardingCompleted();
+
+    if (!onboardingCompleted) {
+      if (!mounted) return;
+      context.go('/onboarding');
+      return;
+    }
+
+    final user = authService.currentUser;
+
+    if (user != null) {
+      final appUser = await userRepository.getUser(user.uid);
+
+      if (!mounted) return;
+      context.go(appUser == null ? '/profile-setup' : '/home');
+      return;
+    }
+
+    if (!mounted) return;
+    context.go('/home');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.darkBackground, Color(0xFF0F3A24)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _onTap,
+        behavior: HitTestBehavior.translucent,
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/splash_bg.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              const Spacer(),
-              Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.primaryRed, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryRed.withValues(alpha: 0.2),
-                      blurRadius: 40,
-                      spreadRadius: 10,
+              // Loading indicator at bottom
+              const Positioned(
+                bottom: 80,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFE53935),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Yükleniyor...',
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'A',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 72,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
               ),
-              const SizedBox(height: 32),
-              const Text(
-                'AMEDSPOR',
-                style: AppTextStyles.h1,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Bir Kulüpten Daha Fazlası',
-                style: AppTextStyles.bodyMedium,
-              ),
-              const Spacer(),
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: AppColors.primaryRed,
-                ),
-              ),
-              const SizedBox(height: 64),
             ],
           ),
         ),

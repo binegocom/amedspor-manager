@@ -46,6 +46,15 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get appSettings =>
       _db.collection('appSettings');
 
+  CollectionReference<Map<String, dynamic>> get feedback =>
+      _db.collection('feedback');
+
+  CollectionReference<Map<String, dynamic>> get errorReports =>
+      _db.collection('errorReports');
+
+  CollectionReference<Map<String, dynamic>> get auditLogs =>
+      _db.collection('auditLogs');
+
   CollectionReference<Map<String, dynamic>> messages(String roomId) {
     return chatRooms.doc(roomId).collection('messages');
   }

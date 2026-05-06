@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../main.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -469,7 +468,7 @@ class _SwitchTile extends StatelessWidget {
           ),
           trailing: Switch(
             value: value,
-            activeColor: AppColors.primaryRed,
+            activeThumbColor: AppColors.primaryRed,
             onChanged: onChanged,
           ),
         ),

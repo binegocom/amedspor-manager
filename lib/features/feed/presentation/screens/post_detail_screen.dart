@@ -203,7 +203,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       post.imageUrl!,
                                       width: double.infinity,
                                       fit: BoxFit.fitWidth,
-                                      errorBuilder: (_, __, ___) => const SizedBox(),
+                                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
                                     ),
                                   ),
                                 ],

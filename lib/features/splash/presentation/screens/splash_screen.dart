@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../data/services/local/app_state_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 

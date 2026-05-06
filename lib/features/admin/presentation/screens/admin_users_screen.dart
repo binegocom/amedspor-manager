@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,13 +19,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final userRepository = UserRepository();
   String searchQuery = '';
 
-  Future<bool> _isAdmin() async {
-    final user = authService.currentUser;
-    if (user == null) return false;
-
-    final doc = await firestoreService.users.doc(user.uid).get();
-    return doc.data()?['role'] == 'admin';
-  }
 
   Future<void> _updateRole({
     required AppUserModel user,

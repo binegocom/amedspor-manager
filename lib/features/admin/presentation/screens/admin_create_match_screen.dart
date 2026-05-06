@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/match_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../widgets/admin_layout.dart';
-import '../widgets/admin_sidebar.dart';
 
 class AdminCreateMatchScreen extends StatefulWidget {
   final String? matchId;

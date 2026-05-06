@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
 
@@ -218,8 +217,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: passwordController,
                 label: 'Şifre',
                 icon: Icons.lock_rounded,
-                obscureText: obscurePassword,
-                suffix: IconButton(
+                isPassword: obscurePassword,
+                suffixIcon: IconButton(
                   onPressed: () {
                     setState(() => obscurePassword = !obscurePassword);
                   },

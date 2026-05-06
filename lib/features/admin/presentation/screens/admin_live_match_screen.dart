@@ -162,7 +162,8 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                   matchId: widget.matchId,
                   event: event,
                 );
-                if (mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
           ],
@@ -243,7 +244,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                               const Text('Durum', style: AppTextStyles.label),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
-                                value: selectedStatus,
+                                initialValue: selectedStatus,
                                 dropdownColor: const Color(0xFF1A1A1A),
                                 style: const TextStyle(color: Colors.white),
                                 decoration: const InputDecoration(
@@ -326,7 +327,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                             ),
                             builder: (context, eventSnapshot) {
                               final events = eventSnapshot.data ?? [];
-                              if (events.isEmpty)
+                              if (events.isEmpty) {
                                 return const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 40),
                                   child: Center(
@@ -336,6 +337,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                                     ),
                                   ),
                                 );
+                              }
 
                               return ListView.separated(
                                 shrinkWrap: true,
@@ -416,9 +418,9 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                 ],
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

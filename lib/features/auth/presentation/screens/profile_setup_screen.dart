@@ -8,7 +8,6 @@ import '../../../../data/models/app_user_model.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
 import '../../../../shared/components/premium_card.dart';

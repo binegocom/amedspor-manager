@@ -203,7 +203,7 @@ class _PostCard extends StatelessWidget {
                 width: double.infinity,
                 height: 160,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox(),
+                errorBuilder: (context, error, stackTrace) => const SizedBox(),
               ),
             ),
           ],

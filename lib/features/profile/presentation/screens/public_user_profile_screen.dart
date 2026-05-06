@@ -7,7 +7,6 @@ import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/login_required_modal.dart';
 
@@ -401,14 +400,14 @@ class _BadgesRow extends StatelessWidget {
         Expanded(
           child: _BadgeCard(icon: Icons.emoji_events_rounded, title: 'Usta'),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _BadgeCard(
             icon: Icons.local_fire_department_rounded,
             title: 'Aktif',
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _BadgeCard(icon: Icons.forum_rounded, title: 'Tribün'),
         ),

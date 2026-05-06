@@ -5,9 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
-import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/premium_header.dart';
 import '../../../../data/models/lineup_model.dart';
 import '../../../../data/repositories/lineup_repository.dart';
 import '../../../../data/models/player_model.dart';
@@ -201,7 +201,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                               separatorBuilder: (_, _) => const SizedBox(height: 12),
                               itemBuilder: (context, playerIndex) {
                                 final player = filteredPlayers[playerIndex];
-                                return AppCard(
+                                return PremiumCard(
                                   onTap: () {
                                     setState(() {
                                       players[index] = players[index].copyWith(
@@ -366,7 +366,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(title: 'KADRO KUR', showBackButton: true),
+            const PremiumHeader(title: 'KADRO KUR', showBackButton: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: _StatusCard(power: lineupPower, captain: captainName),
@@ -442,8 +442,8 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      color: AppColors.surface,
+    return PremiumCard(
+      backgroundColor: AppColors.surface,
       child: Row(
         children: [
           Container(

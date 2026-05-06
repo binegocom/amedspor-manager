@@ -3,7 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
 import '../../../../data/models/match_model.dart';
@@ -220,7 +220,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                     flex: 2,
                     child: Column(
                       children: [
-                        AppCard(
+                        PremiumCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -286,7 +286,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        AppCard(
+                        PremiumCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -321,7 +321,7 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                   ),
                   const SizedBox(width: 24),
                   Expanded(
-                    child: AppCard(
+                    child: PremiumCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

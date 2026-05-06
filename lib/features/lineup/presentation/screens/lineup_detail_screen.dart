@@ -5,8 +5,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
-import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/premium_card.dart';
+import '../../../../shared/components/premium_header.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
 import '../../../../data/models/lineup_model.dart';
@@ -104,10 +104,10 @@ class _LineupDetailScreenState extends State<LineupDetailScreen> {
 
             return Column(
               children: [
-                const AppHeader(title: 'KADRO DETAYI', showBackButton: true),
+                const PremiumHeader(title: 'KADRO DETAYI', showBackButton: true),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: AppCard(
+                  child: PremiumCard(
                     child: Row(
                       children: [
                         _StatItem(label: 'Güç', value: '${lineup.power}', icon: Icons.bolt_rounded),

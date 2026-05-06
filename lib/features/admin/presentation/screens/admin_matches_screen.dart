@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../data/models/match_model.dart';
 import '../../../../data/repositories/match_repository.dart';
@@ -103,7 +103,7 @@ class _AdminMatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLive = match.status == 'live';
 
-    return AppCard(
+    return PremiumCard(
       child: Row(
         children: [
           Container(

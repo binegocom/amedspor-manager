@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../widgets/admin_layout.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -126,7 +126,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return PremiumCard(
       child: Row(
         children: [
           Container(
@@ -160,7 +160,7 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return PremiumCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

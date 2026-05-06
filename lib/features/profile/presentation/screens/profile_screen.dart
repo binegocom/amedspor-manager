@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../shared/components/premium_card.dart';
 
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../data/models/app_user_model.dart';
@@ -373,7 +374,9 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      backgroundColor: const Color(0xFF1A1A1A),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           CircleAvatar(
@@ -445,7 +448,8 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      backgroundColor: const Color(0xFF1A1A1A),
       padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -481,8 +485,10 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DarkCard(
+    return PremiumCard(
+      backgroundColor: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         onTap: onTap,
@@ -525,24 +531,3 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _DarkCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? margin;
-  final EdgeInsetsGeometry? padding;
-
-  const _DarkCard({required this.child, this.margin, this.padding});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: child,
-    );
-  }
-}

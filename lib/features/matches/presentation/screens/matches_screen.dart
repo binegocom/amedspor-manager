@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
-import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/premium_header.dart';
 import '../../../../data/models/match_model.dart';
 import '../../../../data/repositories/match_repository.dart';
 
@@ -31,7 +31,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(title: 'MAÇLAR', showBackButton: false),
+            const PremiumHeader(title: 'MAÇLAR', showBackButton: false),
             const SizedBox(height: 8),
             _SegmentedControl(
               selectedIndex: _selectedSegment,
@@ -134,7 +134,7 @@ class _MatchListItem extends StatelessWidget {
     final isLive = match.status == 'live';
     final isFinished = match.status == 'finished';
 
-    return AppCard(
+    return PremiumCard(
       onTap: () => context.push('/match-live/${match.id}'),
       child: Column(
         children: [

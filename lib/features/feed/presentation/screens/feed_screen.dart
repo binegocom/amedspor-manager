@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
-import '../../../../shared/components/app_card.dart';
-import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/premium_card.dart';
+import '../../../../shared/components/premium_header.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
 
@@ -49,7 +49,7 @@ class _FeedScreenState extends State<FeedScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(title: 'TARAFTAR AKIŞI'),
+            const PremiumHeader(title: 'TARAFTAR AKIŞI', showBackButton: false),
             const SizedBox(height: 8),
             SizedBox(
               height: 48,
@@ -149,7 +149,7 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return PremiumCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

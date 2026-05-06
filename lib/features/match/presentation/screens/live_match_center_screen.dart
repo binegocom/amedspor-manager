@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
-import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/premium_header.dart';
 import '../../../../data/models/match_model.dart';
 import '../../../../data/models/match_event_model.dart';
 import '../../../../data/repositories/match_repository.dart';
@@ -38,7 +38,7 @@ class LiveMatchCenterScreen extends StatelessWidget {
           return SafeArea(
             child: Column(
               children: [
-                AppHeader(
+                PremiumHeader(
                   title: 'MAÇ MERKEZİ',
                   actions: [
                     _ChatAction(matchId: matchId),
@@ -277,9 +277,9 @@ class _MotmVotingState extends State<_MotmVoting> {
   Widget build(BuildContext context) {
     final totalVotes = widget.match.motmResults.values.fold(0, (sum, v) => sum + v);
 
-    return AppCard(
+    return PremiumCard(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      color: AppColors.surface,
+      backgroundColor: AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

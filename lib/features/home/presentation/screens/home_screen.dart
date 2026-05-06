@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
-import '../../../../shared/components/app_card.dart';
+import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../data/models/match_model.dart';
 import '../../../../data/models/lineup_model.dart';
@@ -125,8 +125,8 @@ class _MatchHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLive = match.status == 'live';
 
-    return AppCard(
-      color: AppColors.card,
+    return PremiumCard(
+      backgroundColor: AppColors.card,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -261,9 +261,9 @@ class _HaftaninKadrosuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return PremiumCard(
       onTap: onTap,
-      color: AppColors.softGreen,
+      backgroundColor: AppColors.softGreen,
       child: Row(
         children: [
           const Icon(Icons.stars_rounded, color: AppColors.gold, size: 40),
@@ -330,7 +330,7 @@ class _PopularLineupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return PremiumCard(
       onTap: () => context.go('/lineup-detail/${lineup.id}'),
       padding: const EdgeInsets.all(16),
       borderRadius: 18,

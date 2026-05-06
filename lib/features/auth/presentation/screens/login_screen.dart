@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/app_button.dart';
+import '../../../../shared/components/app_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFFE53935),
+          backgroundColor: AppColors.errorRed,
           content: Text('Email ve şifre alanları boş olamaz.'),
         ),
       );
@@ -71,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFE53935),
+          backgroundColor: AppColors.errorRed,
           content: Text('Giriş hatası: $e'),
         ),
       );
@@ -84,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFFE53935),
+          backgroundColor: AppColors.errorRed,
           content: Text('Sifre sifirlama icin email adresini yaz.'),
         ),
       );
@@ -97,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFF0F6A3D),
+          backgroundColor: AppColors.primaryGreen,
           content: Text(
             'Sifre sifirlama baglantisi email adresine gonderildi.',
           ),
@@ -107,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFE53935),
+          backgroundColor: AppColors.errorRed,
           content: Text('Sifre sifirlama hatasi: $e'),
         ),
       );
@@ -117,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
@@ -137,14 +141,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 104,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF1A1A1A),
+                    color: AppColors.surface,
                     border: Border.all(
-                      color: const Color(0xFFE53935),
+                      color: AppColors.primaryRed,
                       width: 3,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE53935).withValues(alpha: 0.28),
+                        color: AppColors.primaryRed.withValues(alpha: 0.28),
                         blurRadius: 28,
                         spreadRadius: 2,
                       ),
@@ -190,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 34),
 
-              _InputField(
+              AppTextField(
                 controller: emailController,
                 label: 'Email',
                 icon: Icons.email_rounded,
@@ -199,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 14),
 
-              _InputField(
+              AppTextField(
                 controller: passwordController,
                 label: 'Şifre',
                 icon: Icons.lock_rounded,
@@ -212,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscurePassword
                         ? Icons.visibility_off_rounded
                         : Icons.visibility_rounded,
-                    color: const Color(0xFFB3B3B3),
+                    color: AppColors.muted,
                   ),
                 ),
               ),
@@ -233,35 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 16),
 
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          isRegisterMode ? 'KAYIT OL' : 'GİRİŞ YAP',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                          ),
-                        ),
-                ),
+              AppButton(
+                text: isRegisterMode ? 'KAYIT OL' : 'GİRİŞ YAP',
+                isLoading: isSubmitting,
+                onTap: _submit,
               ),
 
               const SizedBox(height: 26),
@@ -282,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Text(
                       isRegisterMode ? 'Giriş yap' : 'Kayıt ol',
                       style: const TextStyle(
-                        color: Color(0xFFE53935),
+                        color: AppColors.primaryRed,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -297,47 +276,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _InputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final Widget? suffix;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-
-  const _InputField({
-    required this.controller,
-    required this.label,
-    required this.icon,
-    this.suffix,
-    this.obscureText = false,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
-      cursorColor: const Color(0xFFE53935),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-        prefixIcon: Icon(icon, color: const Color(0xFF0F6A3D)),
-        suffixIcon: suffix,
-        filled: true,
-        fillColor: const Color(0xFF1A1A1A),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Colors.white10),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFE53935)),
-        ),
-      ),
-    );
-  }
-}

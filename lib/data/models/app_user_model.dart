@@ -16,6 +16,8 @@ class AppUserModel {
   final int followersCount;
   final int followingCount;
 
+  final bool isDisabled;
+
   const AppUserModel({
     required this.id,
     required this.username,
@@ -28,6 +30,7 @@ class AppUserModel {
     required this.supportYear,
     required this.role,
     this.fcmToken,
+    this.isDisabled = false,
     this.notificationPrefs = const {
       'match': true,
       'chat': true,
@@ -49,6 +52,7 @@ class AppUserModel {
       city: map['city'] ?? '',
       supportYear: map['supportYear'] ?? '2024',
       role: map['role'] ?? 'user',
+      isDisabled: map['disabled'] ?? false,
       fcmToken: map['fcmToken'] as String?,
       notificationPrefs: Map<String, bool>.from(map['notificationPrefs'] ?? {
         'match': true,
@@ -71,6 +75,7 @@ class AppUserModel {
       'city': city,
       'supportYear': supportYear,
       'role': role,
+      'disabled': isDisabled,
       'notificationPrefs': notificationPrefs,
       'followersCount': followersCount,
       'followingCount': followingCount,

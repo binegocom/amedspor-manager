@@ -82,6 +82,17 @@ class ProfileScreen extends StatelessWidget {
                     const _SectionTitle(title: 'Rozetler'),
                     const SizedBox(height: 12),
                     _BadgesGrid(badges: appUser?.badges ?? const []),
+                    if (appUser?.role == 'admin') ...[
+                      const SizedBox(height: 24),
+                      const _SectionTitle(title: 'Yönetim'),
+                      const SizedBox(height: 12),
+                      _MenuTile(
+                        icon: Icons.admin_panel_settings_rounded,
+                        title: 'Admin Paneli',
+                        subtitle: 'Sistem yönetimi ve içerik kontrolleri',
+                        onTap: () => context.go('/admin/dashboard'),
+                      ),
+                    ],
                   ],
                 );
                 },

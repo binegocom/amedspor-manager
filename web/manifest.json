@@ -1,6 +1,6 @@
 {
-    "name": "amedspor_app",
-    "short_name": "amedspor_app",
+    "name": "Amedspor Manager",
+    "short_name": "Amedspor Manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

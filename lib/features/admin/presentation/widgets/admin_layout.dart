@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/admin_guard.dart';
 import 'admin_sidebar.dart';
 
-class AdminLayout extends StatelessWidget {
+class AdminLayout extends StatefulWidget {
   final String activeRoute;
   final bool allowModerator;
   final String? title;
@@ -22,18 +22,30 @@ class AdminLayout extends StatelessWidget {
     this.actions,
   });
 
+  @override
+  State<AdminLayout> createState() => _AdminLayoutState();
+}
+
+class _AdminLayoutState extends State<AdminLayout> {
+  late Future<bool> _accessFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _accessFuture = _canAccess();
+  }
+
   Future<bool> _canAccess() {
-    if (allowModerator) {
+    if (widget.allowModerator) {
       return AdminGuard.isAdminOrModerator();
     }
-
     return AdminGuard.isAdmin();
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: _canAccess(),
+      future: _accessFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -77,19 +89,19 @@ class AdminLayout extends StatelessWidget {
                   ? Drawer(
                       backgroundColor: const Color(0xFF111111),
                       child: AdminSidebar(
-                        activeRoute: activeRoute,
+                        activeRoute: widget.activeRoute,
                         width: double.infinity,
                       ),
                     )
                   : null,
               body: Row(
                 children: [
-                  if (!compact) AdminSidebar(activeRoute: activeRoute),
+                  if (!compact) AdminSidebar(activeRoute: widget.activeRoute),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (title != null || subtitle != null || actions != null)
+                        if (widget.title != null || widget.subtitle != null || widget.actions != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
                             child: Row(
@@ -99,19 +111,19 @@ class AdminLayout extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      if (title != null)
+                                      if (widget.title != null)
                                         Text(
-                                          title!,
+                                          widget.title!,
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 32,
                                             fontWeight: FontWeight.w900,
                                           ),
                                         ),
-                                      if (subtitle != null) ...[
+                                      if (widget.subtitle != null) ...[
                                         const SizedBox(height: 8),
                                         Text(
-                                          subtitle!,
+                                          widget.subtitle!,
                                           style: const TextStyle(
                                             color: Color(0xFFA7B3AA),
                                             fontSize: 16,
@@ -121,16 +133,16 @@ class AdminLayout extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                if (actions != null) ...[
+                                if (widget.actions != null) ...[
                                   const SizedBox(width: 24),
-                                  Row(children: actions!),
+                                  Row(children: widget.actions!),
                                 ],
                               ],
                             ),
                           ),
-                        if (title != null || subtitle != null || actions != null)
+                        if (widget.title != null || widget.subtitle != null || widget.actions != null)
                           const SizedBox(height: 32),
-                        Expanded(child: child),
+                        Expanded(child: widget.child),
                       ],
                     ),
                   ),

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../data/models/report_model.dart';
 import '../../../../data/repositories/report_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../widgets/admin_sidebar.dart';
+import 'package:amedspor_app/features/admin/presentation/widgets/admin_layout.dart';
 
 class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
@@ -20,15 +20,6 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   String selectedFilter = 'reviewing';
 
-  Future<bool> _isAdminOrModerator() async {
-    final user = authService.currentUser;
-    if (user == null) return false;
-
-    final doc = await firestoreService.users.doc(user.uid).get();
-    final role = doc.data()?['role'];
-
-    return role == 'admin' || role == 'moderator';
-  }
 
   List<ReportModel> _filterReports(List<ReportModel> reports) {
     if (selectedFilter == 'all') return reports;
@@ -144,197 +135,122 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAdminOrModerator(),
-      builder: (context, adminSnapshot) {
-        if (adminSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0E0E0E),
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFFE53935)),
+    return AdminLayout(
+      activeRoute: AdminReportsScreen.routePath,
+      title: 'Rapor Yönetimi',
+      subtitle: 'Kullanıcı şikayetlerini incele, çöz veya reddet.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Wrap(
+              spacing: 10,
+              children: [
+                _FilterChip(
+                  title: 'İnceleniyor',
+                  active: selectedFilter == 'reviewing',
+                  onTap: () {
+                    setState(() => selectedFilter = 'reviewing');
+                  },
+                ),
+                _FilterChip(
+                  title: 'Çözüldü',
+                  active: selectedFilter == 'resolved',
+                  onTap: () {
+                    setState(() => selectedFilter = 'resolved');
+                  },
+                ),
+                _FilterChip(
+                  title: 'Reddedildi',
+                  active: selectedFilter == 'rejected',
+                  onTap: () {
+                    setState(() => selectedFilter = 'rejected');
+                  },
+                ),
+                _FilterChip(
+                  title: 'Tümü',
+                  active: selectedFilter == 'all',
+                  onTap: () {
+                    setState(() => selectedFilter = 'all');
+                  },
+                ),
+              ],
             ),
-          );
-        }
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: StreamBuilder<List<ReportModel>>(
+              stream: reportRepository.watchAllReports(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFE53935),
+                    ),
+                  );
+                }
 
-        if (adminSnapshot.data != true) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0E0E0E),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Admin girişi yap'),
-              ),
-            ),
-          );
-        }
+                final reports = _filterReports(
+                  snapshot.data ?? [],
+                );
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 900;
-
-            return Scaffold(
-              backgroundColor: const Color(0xFF0E0E0E),
-              appBar: compact
-                  ? AppBar(
-                      backgroundColor: const Color(0xFF111111),
-                      foregroundColor: Colors.white,
-                      title: const Text('Rapor Yönetimi'),
-                    )
-                  : null,
-              drawer: compact
-                  ? const Drawer(
-                      backgroundColor: Color(0xFF111111),
-                      child: AdminSidebar(
-                        activeRoute: AdminReportsScreen.routePath,
-                        width: double.infinity,
-                      ),
-                    )
-                  : null,
-              body: Row(
-                children: [
-                  if (!compact) const _AdminSidebar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(28),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Rapor Yönetimi',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Kullanıcı şikayetlerini incele, çöz veya reddet.',
-                            style: TextStyle(
-                              color: Color(0xFFB3B3B3),
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          Wrap(
-                            spacing: 10,
-                            children: [
-                              _FilterChip(
-                                title: 'İnceleniyor',
-                                active: selectedFilter == 'reviewing',
-                                onTap: () {
-                                  setState(() => selectedFilter = 'reviewing');
-                                },
-                              ),
-                              _FilterChip(
-                                title: 'Çözüldü',
-                                active: selectedFilter == 'resolved',
-                                onTap: () {
-                                  setState(() => selectedFilter = 'resolved');
-                                },
-                              ),
-                              _FilterChip(
-                                title: 'Reddedildi',
-                                active: selectedFilter == 'rejected',
-                                onTap: () {
-                                  setState(() => selectedFilter = 'rejected');
-                                },
-                              ),
-                              _FilterChip(
-                                title: 'Tümü',
-                                active: selectedFilter == 'all',
-                                onTap: () {
-                                  setState(() => selectedFilter = 'all');
-                                },
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          Expanded(
-                            child: StreamBuilder<List<ReportModel>>(
-                              stream: reportRepository.watchAllReports(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFFE53935),
-                                    ),
-                                  );
-                                }
-
-                                final reports = _filterReports(
-                                  snapshot.data ?? [],
-                                );
-
-                                if (reports.isEmpty) {
-                                  return const Center(
-                                    child: Text(
-                                      'Bu filtrede rapor bulunmuyor.',
-                                      style: TextStyle(
-                                        color: Color(0xFFB3B3B3),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                return ListView.separated(
-                                  itemCount: reports.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final report = reports[index];
-
-                                    return _AdminReportCard(
-                                      report: report,
-                                      statusColor: _statusColor(report.status),
-                                      statusText: _statusText(report.status),
-                                      onOpenTarget: () {
-                                        if (report.targetType == 'post') {
-                                          context.go(
-                                            '/post/${report.targetId}',
-                                          );
-                                        } else if (report.targetType ==
-                                            'user') {
-                                          context.go(
-                                            '/profile/${report.targetId}',
-                                          );
-                                        }
-                                      },
-                                      onResolve: () {
-                                        _updateReportStatus(
-                                          report: report,
-                                          status: 'resolved',
-                                        );
-                                      },
-                                      onReject: () {
-                                        _updateReportStatus(
-                                          report: report,
-                                          status: 'rejected',
-                                        );
-                                      },
-                                      onDeleteTarget: () =>
-                                          _deleteTarget(report),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                if (reports.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Bu filtrede rapor bulunmuyor.',
+                      style: TextStyle(
+                        color: Color(0xFFB3B3B3),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  itemCount: reports.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final report = reports[index];
+
+                    return _AdminReportCard(
+                      report: report,
+                      statusColor: _statusColor(report.status),
+                      statusText: _statusText(report.status),
+                      onOpenTarget: () {
+                        if (report.targetType == 'post') {
+                          context.go(
+                            '/post/${report.targetId}',
+                          );
+                        } else if (report.targetType == 'user') {
+                          context.go(
+                            '/profile/${report.targetId}',
+                          );
+                        }
+                      },
+                      onResolve: () {
+                        _updateReportStatus(
+                          report: report,
+                          status: 'resolved',
+                        );
+                      },
+                      onReject: () {
+                        _updateReportStatus(
+                          report: report,
+                          status: 'rejected',
+                        );
+                      },
+                      onDeleteTarget: () => _deleteTarget(report),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -581,143 +497,3 @@ class _MiniBadge extends StatelessWidget {
   }
 }
 
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            active: true,
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          _SidebarItem(
-            icon: Icons.forum_rounded,
-            title: 'Sohbet',
-            onTap: () => context.go('/admin/chats'),
-          ),
-          _SidebarItem(
-            icon: Icons.emoji_events_rounded,
-            title: 'Tahminler',
-            onTap: () => context.go('/admin/predictions'),
-          ),
-          _SidebarItem(
-            icon: Icons.settings_rounded,
-            title: 'Ayarlar',
-            onTap: () => context.go('/admin/settings'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}

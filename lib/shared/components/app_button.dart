@@ -48,9 +48,12 @@ class AppButton extends StatelessWidget {
         break;
     }
 
-    return SizedBox(
-      width: width ?? double.infinity,
-      height: height,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double? effectiveWidth = width ?? (constraints.hasBoundedWidth ? double.infinity : null);
+        return SizedBox(
+          width: effectiveWidth,
+          height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
@@ -82,6 +85,8 @@ class AppButton extends StatelessWidget {
                 ],
               ),
       ),
+        );
+      },
     );
   }
 }

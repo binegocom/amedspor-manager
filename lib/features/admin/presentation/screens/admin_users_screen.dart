@@ -193,155 +193,147 @@ class _UserCard extends StatelessWidget {
     final username =
         user.username.startsWith('@') ? user.username : '@${user.username}';
 
-    return FutureBuilder(
-      future: firestoreService.users.doc(user.id).get(),
-      builder: (context, snapshot) {
-        final data = snapshot.data?.data();
-        final isDisabled = data?['disabled'] == true;
-
-        return Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: isDisabled
-                ? const Color(0xFF241515)
-                : const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isDisabled ? const Color(0xFFE53935) : Colors.white10,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: user.isDisabled
+            ? const Color(0xFF241515)
+            : const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: user.isDisabled ? const Color(0xFFE53935) : Colors.white10,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: const Color(0xFF0F6A3D),
+            backgroundImage:
+                user.avatarUrl.isEmpty ? null : NetworkImage(user.avatarUrl),
+            child: user.avatarUrl.isEmpty
+                ? const Icon(Icons.person_rounded, color: Colors.white)
+                : null,
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: const Color(0xFF0F6A3D),
-                backgroundImage:
-                    user.avatarUrl.isEmpty ? null : NetworkImage(user.avatarUrl),
-                child: user.avatarUrl.isEmpty
-                    ? const Icon(Icons.person_rounded, color: Colors.white)
-                    : null,
-              ),
-              const SizedBox(width: 16),
+          const SizedBox(width: 16),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  user.email,
+                  style: const TextStyle(
+                    color: Color(0xFFB3B3B3),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Text(
-                      username,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    _MiniBadge(
+                      text: '${user.points} puan',
+                      color: const Color(0xFF0F6A3D),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      user.email,
-                      style: const TextStyle(
-                        color: Color(0xFFB3B3B3),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _MiniBadge(
-                          text: '${user.points} puan',
-                          color: const Color(0xFF0F6A3D),
-                        ),
-                        const SizedBox(width: 8),
-                        _MiniBadge(
-                          text: isDisabled ? 'Pasif' : 'Aktif',
-                          color: isDisabled
-                              ? const Color(0xFFE53935)
-                              : const Color(0xFF0F6A3D),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    _MiniBadge(
+                      text: user.isDisabled ? 'Pasif' : 'Aktif',
+                      color: user.isDisabled
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFF0F6A3D),
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(width: 12),
-
-              SizedBox(
-                width: 160,
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: user.role,
-                    dropdownColor: const Color(0xFF1A1A1A),
-                    iconEnabledColor: Colors.white,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'user',
-                        child: Text(
-                          'User',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'moderator',
-                        child: Text(
-                          'Moderator',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'admin',
-                        child: Text(
-                          'Admin',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      onRoleChanged(value);
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              OutlinedButton.icon(
-                onPressed: onOpenProfile,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF0F6A3D)),
-                ),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: const Text('Profil'),
-              ),
-
-              const SizedBox(width: 8),
-
-              OutlinedButton.icon(
-                onPressed: onToggleDisabled,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: isDisabled
-                      ? const Color(0xFF0F6A3D)
-                      : const Color(0xFFE53935),
-                  side: BorderSide(
-                    color: isDisabled
-                        ? const Color(0xFF0F6A3D)
-                        : const Color(0xFFE53935),
-                  ),
-                ),
-                icon: Icon(
-                  isDisabled
-                      ? Icons.check_circle_rounded
-                      : Icons.block_rounded,
-                  size: 18,
-                ),
-                label: Text(isDisabled ? 'Aktifleştir' : 'Pasifleştir'),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+
+          const SizedBox(width: 12),
+
+          SizedBox(
+            width: 160,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: user.role,
+                dropdownColor: const Color(0xFF1A1A1A),
+                iconEnabledColor: Colors.white,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'user',
+                    child: Text(
+                      'User',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'moderator',
+                    child: Text(
+                      'Moderator',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'admin',
+                    child: Text(
+                      'Admin',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  onRoleChanged(value);
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          OutlinedButton.icon(
+            onPressed: onOpenProfile,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFF0F6A3D)),
+            ),
+            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            label: const Text('Profil'),
+          ),
+
+          const SizedBox(width: 8),
+
+          OutlinedButton.icon(
+            onPressed: onToggleDisabled,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: user.isDisabled
+                  ? const Color(0xFF0F6A3D)
+                  : const Color(0xFFE53935),
+              side: BorderSide(
+                color: user.isDisabled
+                    ? const Color(0xFF0F6A3D)
+                    : const Color(0xFFE53935),
+              ),
+            ),
+            icon: Icon(
+              user.isDisabled
+                  ? Icons.check_circle_rounded
+                  : Icons.block_rounded,
+              size: 18,
+            ),
+            label: Text(user.isDisabled ? 'Aktifleştir' : 'Pasifleştir'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -9,24 +9,28 @@ class LineupRepository {
   Stream<List<LineupModel>> watchUserLineups(String userId) {
     return firestoreService.lineups
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          final items = snapshot.docs
               .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-              .toList(),
-        );
+              .toList();
+
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
   }
 
   Stream<List<LineupModel>> watchMatchLineups(String matchId) {
     return firestoreService.lineups
         .where('matchId', isEqualTo: matchId)
-        .orderBy('likes', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          final items = snapshot.docs
               .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-              .toList(),
-        );
+              .toList();
+
+          items.sort((a, b) => b.likes.compareTo(a.likes));
+          return items;
+        });
   }
 }

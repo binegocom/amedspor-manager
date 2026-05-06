@@ -47,7 +47,10 @@ class _FeedScreenState extends State<FeedScreen> {
             SizedBox(
               height: 54,
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 scrollDirection: Axis.horizontal,
                 children: const [
                   _FeedChip(title: 'Tümü', active: true),
@@ -114,10 +117,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onSearch;
 
-  const _Header({
-    required this.onBack,
-    required this.onSearch,
-  });
+  const _Header({required this.onBack, required this.onSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -129,10 +129,7 @@ class _Header extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Icon(
-            Icons.dynamic_feed_rounded,
-            color: Color(0xFFE53935),
-          ),
+          const Icon(Icons.dynamic_feed_rounded, color: Color(0xFFE53935)),
           const SizedBox(width: 10),
           const Text(
             'Taraftar Akışı',
@@ -157,10 +154,7 @@ class _FeedChip extends StatelessWidget {
   final String title;
   final bool active;
 
-  const _FeedChip({
-    required this.title,
-    required this.active,
-  });
+  const _FeedChip({required this.title, required this.active});
 
   @override
   Widget build(BuildContext context) {
@@ -189,10 +183,7 @@ class _PostCard extends StatelessWidget {
   final PostModel post;
   final VoidCallback onTap;
 
-  const _PostCard({
-    required this.post,
-    required this.onTap,
-  });
+  const _PostCard({required this.post, required this.onTap});
 
   IconData get icon {
     if (post.category == 'Kadro') {
@@ -254,10 +245,7 @@ class _PostCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               post.content,
-              style: const TextStyle(
-                color: Color(0xFFB3B3B3),
-                height: 1.45,
-              ),
+              style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.45),
             ),
             const SizedBox(height: 16),
             Row(
@@ -272,10 +260,7 @@ class _PostCard extends StatelessWidget {
                   label: '${post.commentsCount}',
                 ),
                 const Spacer(),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.white38,
-                ),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
               ],
             ),
           ],
@@ -289,10 +274,7 @@ class _PostAction extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _PostAction({
-    required this.icon,
-    required this.label,
-  });
+  const _PostAction({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {

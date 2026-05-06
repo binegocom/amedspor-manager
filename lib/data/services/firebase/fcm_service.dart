@@ -6,11 +6,7 @@ class FcmService {
   final FirebaseMessaging _messaging;
 
   Future<void> init() async {
-    await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
     await _messaging.setAutoInitEnabled(true);
   }

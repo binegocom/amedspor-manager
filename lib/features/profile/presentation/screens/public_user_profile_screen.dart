@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/app_user_model.dart';
+import '../../../../data/models/post_model.dart';
+import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/repositories/user_repository.dart';
 
 class PublicUserProfileScreen extends StatefulWidget {
   final String userId;
 
-  const PublicUserProfileScreen({
-    super.key,
-    required this.userId,
-  });
+  const PublicUserProfileScreen({super.key, required this.userId});
 
   static const String routePath = '/profile/:userId';
 
@@ -42,6 +41,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userRepository = UserRepository();
+    final postRepository = PostRepository();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
@@ -103,15 +103,41 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
               const _SectionTitle(title: 'Son Paylaşımlar'),
               const SizedBox(height: 12),
 
-              _PostPreviewCard(
-                title: 'Maç Önü Yorumu',
-                content: 'Bu hafta orta saha maçı belirler.',
-                onTap: () => context.go('/post/post_001'),
-              ),
-              _PostPreviewCard(
-                title: 'Benim İlk 11’im',
-                content: '4-3-3 ile çıkmalıyız.',
-                onTap: () => context.go('/lineup/match_001'),
+              StreamBuilder<List<PostModel>>(
+                stream: postRepository.watchUserPosts(widget.userId),
+                builder: (context, snapshot) {
+                  final posts = snapshot.data ?? const <PostModel>[];
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFE53935),
+                      ),
+                    );
+                  }
+
+                  if (posts.isEmpty) {
+                    return const _DarkCard(
+                      child: Text(
+                        'Bu kullanicinin henuz paylasimi yok.',
+                        style: TextStyle(color: Color(0xFFB3B3B3)),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: posts
+                        .take(5)
+                        .map(
+                          (post) => _PostPreviewCard(
+                            title: post.title,
+                            content: post.content,
+                            onTap: () => context.go('/post/${post.id}'),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
               ),
             ],
           ),
@@ -125,10 +151,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onReport;
 
-  const _Header({
-    required this.onBack,
-    required this.onReport,
-  });
+  const _Header({required this.onBack, required this.onReport});
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +192,9 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username =
-        user.username.startsWith('@') ? user.username : '@${user.username}';
+    final username = user.username.startsWith('@')
+        ? user.username
+        : '@${user.username}';
 
     return Container(
       width: double.infinity,
@@ -178,10 +202,7 @@ class _ProfileHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F6A3D),
-            Color(0xFF111111),
-          ],
+          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -195,10 +216,7 @@ class _ProfileHero extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF1A1A1A),
-              border: Border.all(
-                color: const Color(0xFFE53935),
-                width: 3,
-              ),
+              border: Border.all(color: const Color(0xFFE53935), width: 3),
             ),
             child: user.avatarUrl.isEmpty
                 ? const Icon(
@@ -274,11 +292,17 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: const [
-        Expanded(child: _StatCard(label: 'Puan', value: '2450')),
+        Expanded(
+          child: _StatCard(label: 'Puan', value: '2450'),
+        ),
         SizedBox(width: 12),
-        Expanded(child: _StatCard(label: 'Takipçi', value: '318')),
+        Expanded(
+          child: _StatCard(label: 'Takipçi', value: '318'),
+        ),
         SizedBox(width: 12),
-        Expanded(child: _StatCard(label: 'Post', value: '42')),
+        Expanded(
+          child: _StatCard(label: 'Post', value: '42'),
+        ),
       ],
     );
   }
@@ -288,10 +312,7 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatCard({
-    required this.label,
-    required this.value,
-  });
+  const _StatCard({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -329,10 +350,7 @@ class _BadgesRow extends StatelessWidget {
     return Row(
       children: const [
         Expanded(
-          child: _BadgeCard(
-            icon: Icons.emoji_events_rounded,
-            title: 'Usta',
-          ),
+          child: _BadgeCard(icon: Icons.emoji_events_rounded, title: 'Usta'),
         ),
         SizedBox(width: 12),
         Expanded(
@@ -343,10 +361,7 @@ class _BadgesRow extends StatelessWidget {
         ),
         SizedBox(width: 12),
         Expanded(
-          child: _BadgeCard(
-            icon: Icons.forum_rounded,
-            title: 'Tribün',
-          ),
+          child: _BadgeCard(icon: Icons.forum_rounded, title: 'Tribün'),
         ),
       ],
     );
@@ -357,10 +372,7 @@ class _BadgeCard extends StatelessWidget {
   final IconData icon;
   final String title;
 
-  const _BadgeCard({
-    required this.icon,
-    required this.title,
-  });
+  const _BadgeCard({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -447,10 +459,7 @@ class _DarkCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? margin;
 
-  const _DarkCard({
-    required this.child,
-    this.margin,
-  });
+  const _DarkCard({required this.child, this.margin});
 
   @override
   Widget build(BuildContext context) {

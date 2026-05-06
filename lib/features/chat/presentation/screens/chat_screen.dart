@@ -10,10 +10,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 class ChatScreen extends StatefulWidget {
   final String roomId;
 
-  const ChatScreen({
-    super.key,
-    required this.roomId,
-  });
+  const ChatScreen({super.key, required this.roomId});
 
   static const String routePath = '/chat/:roomId';
 
@@ -23,9 +20,11 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _roomController = TextEditingController();
 
   final ChatRepository chatRepository = ChatRepository();
   final uuid = const Uuid();
+  bool isSending = false;
 
   String get roomTitle {
     switch (widget.roomId) {
@@ -33,12 +32,19 @@ class _ChatScreenState extends State<ChatScreen> {
         return 'Maç Günü';
       case 'transfer':
         return 'Transfer';
-      default:
+      case 'general':
         return 'Genel Sohbet';
+      default:
+        return widget.roomId;
     }
   }
 
+  bool get isCustomRoom =>
+      !const {'general', 'matchday', 'transfer'}.contains(widget.roomId);
+
   Future<void> _sendMessage() async {
+    if (isSending) return;
+
     final text = _messageController.text.trim();
     final user = authService.currentUser;
 
@@ -58,12 +64,22 @@ class _ChatScreenState extends State<ChatScreen> {
       createdAt: DateTime.now(),
     );
 
-    await chatRepository.sendMessage(
-      roomId: widget.roomId,
-      message: message,
-    );
+    setState(() => isSending = true);
 
-    _messageController.clear();
+    try {
+      await chatRepository.sendMessage(roomId: widget.roomId, message: message);
+      _messageController.clear();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Mesaj gonderilemedi. Lutfen tekrar deneyin.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isSending = false);
+    }
   }
 
   void _showLoginRequired() {
@@ -97,10 +113,7 @@ class _ChatScreenState extends State<ChatScreen> {
               const Text(
                 'Sohbete mesaj yazmak için giriş yapmalısın.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  height: 1.5,
-                ),
+                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -139,11 +152,160 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _createRoom() async {
+    final user = authService.currentUser;
+    if (user == null) {
+      _showLoginRequired();
+      return;
+    }
+
+    _roomController.clear();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text(
+            'Yeni sohbet',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+          ),
+          content: TextField(
+            controller: _roomController,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Sohbet adi',
+              hintStyle: TextStyle(color: Color(0xFF777777)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Vazgec',
+                style: TextStyle(color: Color(0xFFB3B3B3)),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = _roomController.text.trim();
+                if (name.isEmpty) return;
+
+                final roomId = name
+                    .toLowerCase()
+                    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+                    .replaceAll(RegExp(r'-+'), '-')
+                    .replaceAll(RegExp(r'^-|-$'), '');
+
+                if (roomId.isEmpty) return;
+
+                try {
+                  await chatRepository.createRoom(
+                    roomId: roomId,
+                    name: name,
+                    createdBy: user.uid,
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  context.go('/chat/$roomId');
+                } catch (_) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFFE53935),
+                      content: Text(
+                        'Sohbet olusturulamadi. Lutfen tekrar deneyin.',
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Olustur',
+                style: TextStyle(color: Color(0xFFE53935)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteCurrentRoom() async {
+    if (!isCustomRoom) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Sohbeti sil',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        ),
+        content: const Text(
+          'Bu sohbet odasini silmek istiyor musun?',
+          style: TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgec'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Sil',
+              style: TextStyle(color: Color(0xFFE53935)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await chatRepository.deleteRoom(widget.roomId);
+      if (!mounted) return;
+      context.go('/chat/general');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Sohbet silinemedi. Yetkin olmayabilir.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteMessage(MessageModel message) async {
+    final user = authService.currentUser;
+    if (user == null || user.uid != message.userId) return;
+
+    try {
+      await chatRepository.deleteMessage(
+        roomId: widget.roomId,
+        messageId: message.id,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Mesaj silinemedi. Lutfen tekrar deneyin.'),
+        ),
+      );
+    }
+  }
+
   bool get isLoggedIn => authService.currentUser != null;
 
   @override
   void dispose() {
     _messageController.dispose();
+    _roomController.dispose();
     super.dispose();
   }
 
@@ -157,7 +319,10 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             _ChatHeader(
               title: roomTitle,
+              isCustomRoom: isCustomRoom,
               onBack: () => context.go('/home'),
+              onCreateRoom: _createRoom,
+              onDeleteRoom: _deleteCurrentRoom,
             ),
 
             _RoomTabs(activeRoomId: widget.roomId),
@@ -198,8 +363,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
                       return _ChatBubble(
                         message: message,
-                        isMe: currentUser != null &&
+                        isMe:
+                            currentUser != null &&
                             message.userId == currentUser.uid,
+                        onDelete: () => _deleteMessage(message),
                       );
                     },
                   );
@@ -209,6 +376,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
             _ChatInputBar(
               controller: _messageController,
+              isSending: isSending,
               onSend: () {
                 if (!isLoggedIn) {
                   _showLoginRequired();
@@ -227,11 +395,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _ChatHeader extends StatelessWidget {
   final String title;
+  final bool isCustomRoom;
   final VoidCallback onBack;
+  final VoidCallback onCreateRoom;
+  final VoidCallback onDeleteRoom;
 
   const _ChatHeader({
     required this.title,
+    required this.isCustomRoom,
     required this.onBack,
+    required this.onCreateRoom,
+    required this.onDeleteRoom,
   });
 
   @override
@@ -242,15 +416,9 @@ class _ChatHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Icon(
-            Icons.forum_rounded,
-            color: Color(0xFFE53935),
-          ),
+          const Icon(Icons.forum_rounded, color: Color(0xFFE53935)),
           const SizedBox(width: 10),
           Text(
             title,
@@ -261,22 +429,17 @@ class _ChatHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: const Text(
-              '124 aktif',
-              style: TextStyle(
-                color: Color(0xFFB3B3B3),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          IconButton(
+            tooltip: 'Yeni sohbet',
+            onPressed: onCreateRoom,
+            icon: const Icon(Icons.add_comment_rounded, color: Colors.white),
           ),
+          if (isCustomRoom)
+            IconButton(
+              tooltip: 'Sohbeti sil',
+              onPressed: onDeleteRoom,
+              icon: const Icon(Icons.delete_rounded, color: Color(0xFFE53935)),
+            ),
         ],
       ),
     );
@@ -360,16 +523,19 @@ class _RoomChip extends StatelessWidget {
 class _ChatBubble extends StatelessWidget {
   final MessageModel message;
   final bool isMe;
+  final VoidCallback onDelete;
 
   const _ChatBubble({
     required this.message,
     required this.isMe,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bubbleColor =
-        isMe ? const Color(0xFF0F6A3D) : const Color(0xFF1A1A1A);
+    final bubbleColor = isMe
+        ? const Color(0xFF0F6A3D)
+        : const Color(0xFF1A1A1A);
 
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
@@ -385,34 +551,31 @@ class _ChatBubble extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Container(
-          constraints: const BoxConstraints(maxWidth: 280),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: bubbleColor,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: Radius.circular(isMe ? 18 : 4),
-              bottomRight: Radius.circular(isMe ? 4 : 18),
+        GestureDetector(
+          onLongPress: isMe ? onDelete : null,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 280),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(isMe ? 18 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 18),
+              ),
+              border: Border.all(color: Colors.white10),
             ),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Text(
-            message.text,
-            style: const TextStyle(
-              color: Colors.white,
-              height: 1.35,
+            child: Text(
+              message.text,
+              style: const TextStyle(color: Colors.white, height: 1.35),
             ),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           '${message.createdAt.hour.toString().padLeft(2, '0')}:${message.createdAt.minute.toString().padLeft(2, '0')}',
-          style: const TextStyle(
-            color: Color(0xFF777777),
-            fontSize: 11,
-          ),
+          style: const TextStyle(color: Color(0xFF777777), fontSize: 11),
         ),
       ],
     );
@@ -421,10 +584,12 @@ class _ChatBubble extends StatelessWidget {
 
 class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
+  final bool isSending;
   final VoidCallback onSend;
 
   const _ChatInputBar({
     required this.controller,
+    required this.isSending,
     required this.onSend,
   });
 
@@ -434,15 +599,16 @@ class _ChatInputBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
       decoration: const BoxDecoration(
         color: Color(0xFF111111),
-        border: Border(
-          top: BorderSide(color: Colors.white10),
-        ),
+        border: Border(top: BorderSide(color: Colors.white10)),
       ),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: controller,
+              enabled: !isSending,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => isSending ? null : onSend(),
               style: const TextStyle(color: Colors.white),
               cursorColor: const Color(0xFFE53935),
               decoration: InputDecoration(
@@ -463,7 +629,7 @@ class _ChatInputBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: onSend,
+            onTap: isSending ? null : onSend,
             child: Container(
               width: 48,
               height: 48,
@@ -471,10 +637,16 @@ class _ChatInputBar extends StatelessWidget {
                 color: Color(0xFFE53935),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.send_rounded,
-                color: Colors.white,
-              ),
+              child: isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white),
             ),
           ),
         ],

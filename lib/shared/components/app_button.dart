@@ -21,11 +21,7 @@ class AppButton extends StatelessWidget {
         ? Text(text)
         : Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon),
-              const SizedBox(width: 8),
-              Text(text),
-            ],
+            children: [Icon(icon), const SizedBox(width: 8), Text(text)],
           );
 
     if (outlined) {

@@ -10,10 +10,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 class PostDetailScreen extends StatefulWidget {
   final String postId;
 
-  const PostDetailScreen({
-    super.key,
-    required this.postId,
-  });
+  const PostDetailScreen({super.key, required this.postId});
 
   static const String routePath = '/post/:postId';
 
@@ -23,6 +20,7 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   final commentController = TextEditingController();
+  final commentFocusNode = FocusNode();
 
   final postRepository = PostRepository();
   final uuid = const Uuid();
@@ -37,12 +35,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       return;
     }
 
-    setState(() => liked = !liked);
+    final nextLiked = !liked;
+    setState(() => liked = nextLiked);
 
-    await postRepository.toggleLike(
-      postId: widget.postId,
-      liked: liked,
-    );
+    try {
+      await postRepository.toggleLike(postId: widget.postId, liked: nextLiked);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => liked = !nextLiked);
+      _showError('Begeni kaydedilemedi. Lutfen tekrar dene.');
+    }
   }
 
   Future<void> _sendComment() async {
@@ -65,12 +67,31 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       createdAt: DateTime.now(),
     );
 
-    await postRepository.addComment(
-      postId: widget.postId,
-      comment: comment,
-    );
+    try {
+      await postRepository.addComment(postId: widget.postId, comment: comment);
+      commentController.clear();
+    } catch (_) {
+      if (!mounted) return;
+      _showError('Yorum gonderilemedi. Lutfen tekrar dene.');
+    }
+  }
 
-    commentController.clear();
+  void _focusCommentInput() {
+    if (!isLoggedIn) {
+      _showLoginRequired('Yorum yapmak iÃ§in giriÅŸ yapmalÄ±sÄ±n.');
+      return;
+    }
+
+    commentFocusNode.requestFocus();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFFE53935),
+        content: Text(message),
+      ),
+    );
   }
 
   void _showLoginRequired(String message) {
@@ -86,7 +107,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_rounded, color: Color(0xFFE53935), size: 44),
+              const Icon(
+                Icons.lock_rounded,
+                color: Color(0xFFE53935),
+                size: 44,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Üyelik Gerekli',
@@ -100,10 +125,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  height: 1.5,
-                ),
+                style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -147,16 +169,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   @override
+  void dispose() {
+    commentController.dispose();
+    commentFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              onBack: () => context.go('/feed'),
-              onReport: _reportPost,
-            ),
+            _Header(onBack: () => context.go('/feed'), onReport: _reportPost),
 
             Expanded(
               child: FutureBuilder<PostModel?>(
@@ -255,7 +281,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       icon: Icons.chat_bubble_outline_rounded,
                                       label: '${comments.length}',
                                       active: false,
-                                      onTap: () {},
+                                      onTap: _focusCommentInput,
                                     ),
                                   ],
                                 ),
@@ -300,6 +326,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
             _CommentInputBar(
               controller: commentController,
+              focusNode: commentFocusNode,
               onSend: _sendComment,
             ),
           ],
@@ -313,10 +340,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onReport;
 
-  const _Header({
-    required this.onBack,
-    required this.onReport,
-  });
+  const _Header({required this.onBack, required this.onReport});
 
   @override
   Widget build(BuildContext context) {
@@ -422,10 +446,7 @@ class _CommentCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   comment.text,
-                  style: const TextStyle(
-                    color: Color(0xFFB3B3B3),
-                    height: 1.4,
-                  ),
+                  style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.4),
                 ),
               ],
             ),
@@ -438,10 +459,12 @@ class _CommentCard extends StatelessWidget {
 
 class _CommentInputBar extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final VoidCallback onSend;
 
   const _CommentInputBar({
     required this.controller,
+    required this.focusNode,
     required this.onSend,
   });
 
@@ -458,6 +481,9 @@ class _CommentInputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onSend(),
               style: const TextStyle(color: Colors.white),
               cursorColor: const Color(0xFFE53935),
               decoration: InputDecoration(
@@ -499,10 +525,7 @@ class _DarkCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? margin;
 
-  const _DarkCard({
-    required this.child,
-    this.margin,
-  });
+  const _DarkCard({required this.child, this.margin});
 
   @override
   Widget build(BuildContext context) {

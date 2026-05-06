@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../main.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,6 +18,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool likeNotifications = true;
   bool darkMode = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final value = await appStateService.isDarkMode();
+    if (!mounted) return;
+    setState(() => darkMode = value);
+  }
+
   void _logout() {
     showModalBottomSheet(
       context: context,
@@ -24,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
           child: Column(
@@ -48,10 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text(
                 'Hesabından çıkış yapacaksın. Daha sonra tekrar giriş yapabilirsin.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  height: 1.5,
-                ),
+                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -61,8 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: () async {
                     await authService.signOut();
 
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
+                    if (!sheetContext.mounted) return;
+                    Navigator.pop(sheetContext);
+                    if (!mounted) return;
                     context.go('/login');
                   },
                   style: ElevatedButton.styleFrom(
@@ -80,7 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 10),
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(sheetContext),
                 child: const Text(
                   'Vazgeç',
                   style: TextStyle(color: Color(0xFFB3B3B3)),
@@ -93,13 +104,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _openComingSoon(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF0F6A3D),
-        content: Text('$title yakında aktif olacak.'),
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Dil',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        ),
+        content: const ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.check_circle_rounded, color: Color(0xFF0F6A3D)),
+          title: Text(
+            'Turkce',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          ),
+          subtitle: Text(
+            'Uygulama dili',
+            style: TextStyle(color: Color(0xFFB3B3B3)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Tamam',
+              style: TextStyle(color: Color(0xFFE53935)),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final email = authService.currentUser?.email;
+
+    if (email == null || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Sifre sifirlama icin hesaba bagli email bulunamadi.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await authService.sendPasswordResetEmail(email);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF0F6A3D),
+          content: Text(
+            'Sifre sifirlama baglantisi email adresine gonderildi.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE53935),
+          content: Text('Sifre sifirlama hatasi: $e'),
+        ),
+      );
+    }
   }
 
   @override
@@ -112,9 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(
-                onBack: () => context.go('/profile'),
-              ),
+              _Header(onBack: () => context.go('/profile')),
 
               const SizedBox(height: 24),
 
@@ -132,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.lock_rounded,
                 title: 'Şifre Değiştir',
                 subtitle: 'Hesap güvenliğini güncelle',
-                onTap: () => _openComingSoon('Şifre değiştirme'),
+                onTap: _sendPasswordReset,
               ),
 
               const SizedBox(height: 22),
@@ -182,13 +252,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: darkMode,
                 onChanged: (value) {
                   setState(() => darkMode = value);
+                  AmedsporApp.of(context).setDarkMode(value);
                 },
               ),
               _SettingsTile(
                 icon: Icons.language_rounded,
                 title: 'Dil',
                 subtitle: 'Türkçe',
-                onTap: () => _openComingSoon('Dil seçimi'),
+                onTap: _showLanguageDialog,
               ),
               _SettingsTile(
                 icon: Icons.info_rounded,
@@ -323,10 +394,7 @@ class _SettingsTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Color(0xFFB3B3B3),
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
         ),
         trailing: const Icon(
           Icons.chevron_right_rounded,
@@ -371,10 +439,7 @@ class _SwitchTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Color(0xFFB3B3B3),
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
         ),
         trailing: Switch(
           value: value,
@@ -390,10 +455,7 @@ class _DarkCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? margin;
 
-  const _DarkCard({
-    required this.child,
-    this.margin,
-  });
+  const _DarkCard({required this.child, this.margin});
 
   @override
   Widget build(BuildContext context) {

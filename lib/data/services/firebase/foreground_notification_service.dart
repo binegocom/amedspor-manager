@@ -37,10 +37,7 @@ class ForegroundNotificationService {
             children: [
               const CircleAvatar(
                 backgroundColor: AppColors.red,
-                child: Icon(
-                  Icons.notifications_rounded,
-                  color: Colors.white,
-                ),
+                child: Icon(Icons.notifications_rounded, color: Colors.white),
               ),
               const SizedBox(width: 12),
               Expanded(

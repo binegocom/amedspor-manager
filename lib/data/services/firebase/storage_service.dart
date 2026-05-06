@@ -12,10 +12,7 @@ class StorageService {
   }) async {
     final ref = _storage.ref('users/$userId/profile/avatar.jpg');
 
-    await ref.putFile(
-      file,
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
+    await ref.putFile(file, SettableMetadata(contentType: 'image/jpeg'));
 
     return ref.getDownloadURL();
   }

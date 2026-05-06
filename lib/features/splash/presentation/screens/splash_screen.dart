@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../data/repositories/user_repository.dart';
+import '../../../../data/services/firebase/firebase_providers.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -12,14 +15,37 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final userRepository = UserRepository();
+  Timer? _navigationTimer;
+
   @override
   void initState() {
     super.initState();
 
-    Timer(const Duration(seconds: 2), () {
+    _navigationTimer = Timer(const Duration(seconds: 2), () async {
       if (!mounted) return;
-      context.go('/onboarding');
+
+      final user = authService.currentUser;
+
+      if (user != null) {
+        final appUser = await userRepository.getUser(user.uid);
+
+        if (!mounted) return;
+        context.go(appUser == null ? '/profile-setup' : '/home');
+        return;
+      }
+
+      final onboardingCompleted = await appStateService.isOnboardingCompleted();
+
+      if (!mounted) return;
+      context.go(onboardingCompleted ? '/home' : '/onboarding');
     });
+  }
+
+  @override
+  void dispose() {
+    _navigationTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -31,10 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF0E0E0E),
-              Color(0xFF0F6A3D),
-            ],
+            colors: [Color(0xFF0E0E0E), Color(0xFF0F6A3D)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -50,10 +73,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF1A1A1A),
-                  border: Border.all(
-                    color: const Color(0xFFE53935),
-                    width: 3,
-                  ),
+                  border: Border.all(color: const Color(0xFFE53935), width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFFE53935).withValues(alpha: 0.35),

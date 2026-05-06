@@ -15,4 +15,12 @@ class AppColors {
   static const border = Colors.white10;
   static const warning = Color(0xFFFFB300);
   static const blue = Color(0xFF2E7DFF);
+
+  static const lightBackground = Color(0xFFF6F7F8);
+  static const lightSurface = Color(0xFFFFFFFF);
+  static const lightCard = Color(0xFFFFFFFF);
+  static const lightTextPrimary = Color(0xFF151515);
+  static const lightTextSecondary = Color(0xFF4F5965);
+  static const lightTextMuted = Color(0xFF7B8490);
+  static const lightBorder = Color(0xFFE1E5EA);
 }

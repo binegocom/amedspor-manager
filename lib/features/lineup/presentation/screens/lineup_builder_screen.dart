@@ -5,11 +5,15 @@ import 'package:uuid/uuid.dart';
 import '../../../../data/models/lineup_model.dart';
 import '../../../../data/repositories/lineup_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LineupBuilderScreen extends StatefulWidget {
   final String matchId;
 
-  const LineupBuilderScreen({super.key, required this.matchId});
+  const LineupBuilderScreen({
+    super.key,
+    required this.matchId,
+  });
 
   static const String routePath = '/lineup/:matchId';
 
@@ -18,59 +22,40 @@ class LineupBuilderScreen extends StatefulWidget {
 }
 
 class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
-  String selectedFormation = '4-3-3';
-
   final lineupRepository = LineupRepository();
   final uuid = const Uuid();
 
-  final List<String> formations = const ['4-3-3', '4-2-3-1', '3-5-2', '4-4-2'];
+  String selectedFormation = '4-3-3';
+  String? captainName;
+  bool isSaving = false;
 
-  final List<_PlayerNodeData> players = const [
-    _PlayerNodeData(name: 'Ahmet', top: 48, left: 150),
-    _PlayerNodeData(name: 'Baran', top: 132, left: 58),
-    _PlayerNodeData(name: 'Rojhat', top: 132, left: 242),
-    _PlayerNodeData(name: 'Serhat', top: 210, left: 150),
-    _PlayerNodeData(name: 'Azad', top: 294, left: 42),
-    _PlayerNodeData(name: 'Deniz', top: 294, left: 122),
-    _PlayerNodeData(name: 'Miran', top: 294, left: 205),
-    _PlayerNodeData(name: 'Eren', top: 294, left: 286),
-    _PlayerNodeData(name: 'Cemal', top: 382, left: 82),
-    _PlayerNodeData(name: 'Ferhat', top: 382, left: 224),
-    _PlayerNodeData(name: 'Mazlum', top: 462, left: 150),
+  final List<String> formations = const [
+    '4-3-3',
+    '4-2-3-1',
+    '3-5-2',
+    '4-4-2',
   ];
 
-  Future<void> _saveLineup() async {
-    final user = authService.currentUser;
+  final List<_Player> players = [
+    _Player(name: 'Kaleci', position: 'GK', top: 0.84, left: 0.50),
+    _Player(name: 'Sol Bek', position: 'DEF', top: 0.66, left: 0.18),
+    _Player(name: 'Stoper 1', position: 'DEF', top: 0.68, left: 0.38),
+    _Player(name: 'Stoper 2', position: 'DEF', top: 0.68, left: 0.62),
+    _Player(name: 'Sağ Bek', position: 'DEF', top: 0.66, left: 0.82),
+    _Player(name: 'Orta Saha 1', position: 'MID', top: 0.45, left: 0.30),
+    _Player(name: 'Orta Saha 2', position: 'MID', top: 0.45, left: 0.50),
+    _Player(name: 'Orta Saha 3', position: 'MID', top: 0.45, left: 0.70),
+    _Player(name: 'Sol Kanat', position: 'FWD', top: 0.22, left: 0.22),
+    _Player(name: 'Forvet', position: 'FWD', top: 0.18, left: 0.50),
+    _Player(name: 'Sağ Kanat', position: 'FWD', top: 0.22, left: 0.78),
+  ];
 
-    if (user == null) {
-      _showLoginRequired();
-      return;
-    }
+  int get lineupPower {
+    final formationBonus = selectedFormation == '4-3-3' ? 8 : 5;
+    final captainBonus = captainName == null ? 0 : 12;
+    final filledPlayers = players.where((p) => !p.name.contains('Oyuncu')).length;
 
-    final lineup = LineupModel(
-      id: uuid.v4(),
-      userId: user.uid,
-      matchId: widget.matchId,
-      formation: selectedFormation,
-      players: players.map((player) {
-        return {'name': player.name, 'top': player.top, 'left': player.left};
-      }).toList(),
-      likes: 0,
-      createdAt: DateTime.now(),
-    );
-
-    await lineupRepository.saveLineup(lineup);
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF0F6A3D),
-        content: Text('Kadron kaydedildi.'),
-      ),
-    );
-
-    context.go('/lineups/me');
+    return (filledPlayers * 6 + formationBonus + captainBonus).clamp(0, 100);
   }
 
   void _showLoginRequired() {
@@ -80,7 +65,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
           child: Column(
@@ -89,7 +74,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
               const Icon(
                 Icons.lock_rounded,
                 color: Color(0xFFE53935),
-                size: 44,
+                size: 48,
               ),
               const SizedBox(height: 16),
               const Text(
@@ -102,9 +87,12 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Kadronu kaydetmek veya paylaşmak için giriş yapmalısın.',
+                'Kadronu kaydetmek, paylaşmak ve puan kazanmak için giriş yapmalısın.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
+                style: TextStyle(
+                  color: Color(0xFFB3B3B3),
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -112,28 +100,17 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                Navigator.pop(sheetContext);
                     context.go('/login');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE53935),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                   ),
                   child: const Text(
-                    'Giriş Yap',
+                    'GİRİŞ YAP',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Vazgeç',
-                  style: TextStyle(color: Color(0xFFB3B3B3)),
                 ),
               ),
             ],
@@ -143,45 +120,246 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
     );
   }
 
-  void _showPlayerPicker(String playerName) {
+  void _changeFormation(String formation) {
+    setState(() {
+      selectedFormation = formation;
+
+      if (formation == '4-3-3') {
+        players[0] = players[0].copyWith(top: 0.84, left: 0.50);
+        players[1] = players[1].copyWith(top: 0.66, left: 0.18);
+        players[2] = players[2].copyWith(top: 0.68, left: 0.38);
+        players[3] = players[3].copyWith(top: 0.68, left: 0.62);
+        players[4] = players[4].copyWith(top: 0.66, left: 0.82);
+        players[5] = players[5].copyWith(top: 0.45, left: 0.30);
+        players[6] = players[6].copyWith(top: 0.45, left: 0.50);
+        players[7] = players[7].copyWith(top: 0.45, left: 0.70);
+        players[8] = players[8].copyWith(top: 0.22, left: 0.22);
+        players[9] = players[9].copyWith(top: 0.18, left: 0.50);
+        players[10] = players[10].copyWith(top: 0.22, left: 0.78);
+      }
+
+      if (formation == '4-2-3-1') {
+        players[5] = players[5].copyWith(top: 0.50, left: 0.40);
+        players[6] = players[6].copyWith(top: 0.50, left: 0.60);
+        players[7] = players[7].copyWith(top: 0.35, left: 0.50);
+        players[8] = players[8].copyWith(top: 0.28, left: 0.22);
+        players[9] = players[9].copyWith(top: 0.16, left: 0.50);
+        players[10] = players[10].copyWith(top: 0.28, left: 0.78);
+      }
+
+      if (formation == '3-5-2') {
+        players[1] = players[1].copyWith(top: 0.66, left: 0.28);
+        players[2] = players[2].copyWith(top: 0.68, left: 0.50);
+        players[3] = players[3].copyWith(top: 0.66, left: 0.72);
+        players[4] = players[4].copyWith(top: 0.48, left: 0.14);
+        players[5] = players[5].copyWith(top: 0.45, left: 0.35);
+        players[6] = players[6].copyWith(top: 0.42, left: 0.50);
+        players[7] = players[7].copyWith(top: 0.45, left: 0.65);
+        players[8] = players[8].copyWith(top: 0.48, left: 0.86);
+        players[9] = players[9].copyWith(top: 0.18, left: 0.40);
+        players[10] = players[10].copyWith(top: 0.18, left: 0.60);
+      }
+
+      if (formation == '4-4-2') {
+        players[5] = players[5].copyWith(top: 0.46, left: 0.20);
+        players[6] = players[6].copyWith(top: 0.46, left: 0.40);
+        players[7] = players[7].copyWith(top: 0.46, left: 0.60);
+        players[8] = players[8].copyWith(top: 0.46, left: 0.80);
+        players[9] = players[9].copyWith(top: 0.18, left: 0.40);
+        players[10] = players[10].copyWith(top: 0.18, left: 0.60);
+      }
+    });
+  }
+
+  void _openPlayerSheet(int index) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
+        final suggestions = [
+          'Oyuncu A',
+          'Oyuncu B',
+          'Oyuncu C',
+          'Genç Yetenek',
+          'Formda İsim',
+        ];
+
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 46,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Oyuncu Değiştir',
-                style: TextStyle(
+              Text(
+                '${players[index].position} Oyuncu Seç',
+                style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 21,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 12),
-              _PlayerPickerTile(name: playerName, selected: true),
-              const _PlayerPickerTile(name: 'Mehmet', selected: false),
-              const _PlayerPickerTile(name: 'Diyar', selected: false),
-              const _PlayerPickerTile(name: 'Yusuf', selected: false),
+              const SizedBox(height: 16),
+              ...suggestions.map(
+                (name) => ListTile(
+                  onTap: () {
+                    setState(() {
+                      players[index] = players[index].copyWith(name: name);
+                    });
+                  Navigator.pop(sheetContext);
+                  },
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFF0F6A3D),
+                    child: Icon(Icons.person_rounded, color: Colors.white),
+                  ),
+                  title: Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  subtitle: Text(
+                    players[index].position,
+                    style: const TextStyle(color: Color(0xFFB3B3B3)),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Future<void> _saveLineup() async {
+    final user = authService.currentUser;
+
+    if (user == null) {
+      _showLoginRequired();
+      return;
+    }
+
+    setState(() => isSaving = true);
+
+    try {
+      final lineup = LineupModel(
+        id: uuid.v4(),
+        userId: user.uid,
+        matchId: widget.matchId,
+        formation: selectedFormation,
+        players: players.map((player) {
+          return {
+            'name': player.name,
+            'position': player.position,
+            'top': player.top,
+            'left': player.left,
+            'captain': player.name == captainName,
+          };
+        }).toList(),
+        likes: 0,
+        createdAt: DateTime.now(),
+      );
+
+      await lineupRepository.saveLineup(lineup);
+
+      await firestoreService.users.doc(user.uid).update({
+        'points': FieldValue.increment(10),
+      });
+
+      if (!mounted) return;
+
+      _showResultSheet();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE53935),
+          content: Text('Kadro kaydetme hatası: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  void _showResultSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: Color(0xFFFFB300),
+                size: 54,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Kadron Kaydedildi!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Kadro gücü: $lineupPower/100 • +10 puan kazandın.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFB3B3B3),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                Navigator.pop(sheetContext);
+                    context.go('/lineups/me');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE53935),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'KADROLARIMA GİT',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _shareLineup() {
+    final user = authService.currentUser;
+
+    if (user == null) {
+      _showLoginRequired();
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF0F6A3D),
+        content: Text('Paylaşım sistemi bir sonraki adımda Feed’e bağlanacak.'),
+      ),
     );
   }
 
@@ -192,76 +370,104 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/home')),
+            _Header(
+              onBack: () => context.go('/home'),
+              matchId: widget.matchId,
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+              child: _PowerCard(
+                power: lineupPower,
+                formation: selectedFormation,
+                captainName: captainName,
+              ),
+            ),
+
+            SizedBox(
+              height: 54,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: formations.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final formation = formations[index];
+
+                  return _FormationChip(
+                    title: formation,
+                    active: selectedFormation == formation,
+                    onTap: () => _changeFormation(formation),
+                  );
+                },
+              ),
+            ),
+
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _MatchInfoCard(),
-                    const SizedBox(height: 18),
-                    _PitchCard(
-                      players: players,
-                      onPlayerTap: _showPlayerPicker,
-                    ),
-                    const SizedBox(height: 18),
-                    _FormationSelector(
-                      value: selectedFormation,
-                      formations: formations,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedFormation = value);
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _saveLineup,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE53935),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Text(
-                                'KAYDET',
-                                style: TextStyle(fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton(
-                              onPressed: _showLoginRequired,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(
-                                  color: Color(0xFF0F6A3D),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Text(
-                                'PAYLAŞ',
-                                style: TextStyle(fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                child: _Pitch(
+                  players: players,
+                  captainName: captainName,
+                  onPlayerTap: _openPlayerSheet,
+                  onCaptainSelected: (name) {
+                    setState(() => captainName = name);
+                  },
                 ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _shareLineup,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF0F6A3D)),
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.ios_share_rounded),
+                      label: const Text(
+                        'PAYLAŞ',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: isSaving ? null : _saveLineup,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded),
+                      label: Text(
+                        isSaving ? 'KAYDEDİLİYOR' : 'KAYDET',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -273,336 +479,376 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
 
 class _Header extends StatelessWidget {
   final VoidCallback onBack;
+  final String matchId;
 
-  const _Header({required this.onBack});
+  const _Header({
+    required this.onBack,
+    required this.matchId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 16, 6),
       child: Row(
         children: [
           IconButton(
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Text(
-            'Kadro Kur',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-            ),
+          const CircleAvatar(
+            backgroundColor: Color(0xFFE53935),
+            child: Icon(Icons.sports_soccer_rounded, color: Colors.white),
           ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: const Text(
-              '4-3-3',
-              style: TextStyle(
-                color: Color(0xFFB3B3B3),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MatchInfoCard extends StatelessWidget {
-  const _MatchInfoCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: const Row(
-        children: [
-          _SmallTeamLogo(label: 'A'),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Amedspor vs Altay',
+                const Text(
+                  'Taraftar Teknik Direktör',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 17,
+                    fontSize: 21,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 6),
                 Text(
-                  '12 Mayıs • 20:00',
-                  style: TextStyle(
+                  'Maç ID: $matchId',
+                  style: const TextStyle(
                     color: Color(0xFFB3B3B3),
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          _SmallTeamLogo(label: 'AL'),
         ],
       ),
     );
   }
 }
 
-class _SmallTeamLogo extends StatelessWidget {
-  final String label;
+class _PowerCard extends StatelessWidget {
+  final int power;
+  final String formation;
+  final String? captainName;
 
-  const _SmallTeamLogo({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 25,
-      backgroundColor: const Color(0xFF0F6A3D),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
-class _PitchCard extends StatelessWidget {
-  final List<_PlayerNodeData> players;
-  final ValueChanged<String> onPlayerTap;
-
-  const _PitchCard({required this.players, required this.onPlayerTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 560,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F6A3D),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white24, width: 1),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final scaleX = constraints.maxWidth / 360;
-
-          return Stack(
-            children: [
-              Positioned.fill(child: CustomPaint(painter: _PitchPainter())),
-              ...players.map(
-                (player) => Positioned(
-                  top: player.top,
-                  left: player.left * scaleX,
-                  child: _PlayerNode(
-                    name: player.name,
-                    onTap: () => onPlayerTap(player.name),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PlayerNode extends StatelessWidget {
-  final String name;
-  final VoidCallback onTap;
-
-  const _PlayerNode({required this.name, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 70,
-        child: Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE53935), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              name,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FormationSelector extends StatelessWidget {
-  final String value;
-  final List<String> formations;
-  final ValueChanged<String?> onChanged;
-
-  const _FormationSelector({
-    required this.value,
-    required this.formations,
-    required this.onChanged,
+  const _PowerCard({
+    required this.power,
+    required this.formation,
+    required this.captainName,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = power >= 80
+        ? const Color(0xFF0F6A3D)
+        : power >= 60
+            ? const Color(0xFFFFB300)
+            : const Color(0xFFE53935);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white10),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          dropdownColor: const Color(0xFF1A1A1A),
-          iconEnabledColor: Colors.white,
-          isExpanded: true,
-          items: formations
-              .map(
-                (formation) => DropdownMenuItem(
-                  value: formation,
-                  child: Text(
-                    'Formasyon: $formation',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: color.withValues(alpha: 0.18),
+            child: Icon(Icons.bolt_rounded, color: color, size: 32),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kadro Gücü: $power/100',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
                   ),
                 ),
-              )
-              .toList(),
-          onChanged: onChanged,
-        ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: power / 100,
+                    minHeight: 8,
+                    backgroundColor: Colors.white10,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Formasyon: $formation • Kaptan: ${captainName ?? 'Seçilmedi'}',
+                  style: const TextStyle(
+                    color: Color(0xFFB3B3B3),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _PlayerPickerTile extends StatelessWidget {
-  final String name;
-  final bool selected;
+class _FormationChip extends StatelessWidget {
+  final String title;
+  final bool active;
+  final VoidCallback onTap;
 
-  const _PlayerPickerTile({required this.name, required this.selected});
+  const _FormationChip({
+    required this.title,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: selected
-            ? const Color(0xFFE53935)
-            : const Color(0xFF0F6A3D),
-        child: const Icon(Icons.person_rounded, color: Colors.white),
-      ),
-      title: Text(
-        name,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
+    return InkWell(
+      borderRadius: BorderRadius.circular(99),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0F6A3D) : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(
+            color: active ? const Color(0xFF0F6A3D) : Colors.white10,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          style: TextStyle(
+            color: active ? Colors.white : const Color(0xFFB3B3B3),
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
-      trailing: selected
-          ? const Icon(Icons.check_circle_rounded, color: Color(0xFFE53935))
-          : const Icon(Icons.chevron_right_rounded, color: Colors.white38),
-      onTap: () => Navigator.pop(context),
     );
   }
 }
 
-class _PlayerNodeData {
-  final String name;
-  final double top;
-  final double left;
+class _Pitch extends StatelessWidget {
+  final List<_Player> players;
+  final String? captainName;
+  final ValueChanged<int> onPlayerTap;
+  final ValueChanged<String> onCaptainSelected;
 
-  const _PlayerNodeData({
-    required this.name,
-    required this.top,
-    required this.left,
+  const _Pitch({
+    required this.players,
+    required this.captainName,
+    required this.onPlayerTap,
+    required this.onCaptainSelected,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F6A3D),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white24, width: 2),
+          ),
+          child: Stack(
+            children: [
+              const _PitchLines(),
+              ...players.asMap().entries.map((entry) {
+                final index = entry.key;
+                final player = entry.value;
+
+                return Positioned(
+                  top: constraints.maxHeight * player.top - 28,
+                  left: constraints.maxWidth * player.left - 36,
+                  child: _PlayerChip(
+                    player: player,
+                    isCaptain: captainName == player.name,
+                    onTap: () => onPlayerTap(index),
+                    onLongPress: () => onCaptainSelected(player.name),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PitchLines extends StatelessWidget {
+  const _PitchLines();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _PitchPainter(),
+      size: Size.infinite,
+    );
+  }
 }
 
 class _PitchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.32)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
 
-    final centerY = size.height / 2;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(14, 14, size.width - 28, size.height - 28),
-        const Radius.circular(20),
-      ),
-      linePaint,
+    canvas.drawRect(
+      Rect.fromLTWH(18, 18, size.width - 36, size.height - 36),
+      paint,
     );
 
     canvas.drawLine(
-      Offset(14, centerY),
-      Offset(size.width - 14, centerY),
-      linePaint,
+      Offset(18, size.height / 2),
+      Offset(size.width - 18, size.height / 2),
+      paint,
     );
 
-    canvas.drawCircle(Offset(size.width / 2, centerY), 54, linePaint);
-
-    canvas.drawRect(
-      Rect.fromLTWH(size.width * 0.25, 14, size.width * 0.5, 72),
-      linePaint,
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      48,
+      paint,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(size.width * 0.25, size.height - 86, size.width * 0.5, 72),
-      linePaint,
+      Rect.fromCenter(
+        center: Offset(size.width / 2, 18),
+        width: 150,
+        height: 70,
+      ),
+      paint,
+    );
+
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(size.width / 2, size.height - 18),
+        width: 150,
+        height: 70,
+      ),
+      paint,
     );
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PlayerChip extends StatelessWidget {
+  final _Player player;
+  final bool isCaptain;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _PlayerChip({
+    required this.player,
+    required this.isCaptain,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor:
+                    isCaptain ? const Color(0xFFFFB300) : const Color(0xFFE53935),
+                child: const Icon(Icons.person_rounded, color: Colors.white),
+              ),
+              if (isCaptain)
+                const Positioned(
+                  right: -6,
+                  top: -6,
+                  child: CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      'C',
+                      style: TextStyle(
+                        color: Color(0xFFE53935),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Container(
+            width: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.42),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              player.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Player {
+  final String name;
+  final String position;
+  final double top;
+  final double left;
+
+  const _Player({
+    required this.name,
+    required this.position,
+    required this.top,
+    required this.left,
+  });
+
+  _Player copyWith({
+    String? name,
+    String? position,
+    double? top,
+    double? left,
+  }) {
+    return _Player(
+      name: name ?? this.name,
+      position: position ?? this.position,
+      top: top ?? this.top,
+      left: left ?? this.left,
+    );
+  }
 }

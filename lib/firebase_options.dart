@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'amedsporapp.firebasestorage.app',
     measurementId: 'G-XFX2FR04SD',
   );
-
 }

@@ -27,14 +27,30 @@ class _SearchScreenState extends State<SearchScreen> {
       isLoading = true;
     });
 
-    final data = await searchRepository.search(value);
+    try {
+      final data = await searchRepository.search(value);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      results = data;
-      isLoading = false;
-    });
+      setState(() {
+        results = data;
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        results = [];
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Arama yapilamadi. Lutfen tekrar deneyin.'),
+        ),
+      );
+    }
   }
 
   IconData _iconForType(String type) {

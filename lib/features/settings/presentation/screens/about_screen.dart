@@ -13,9 +13,7 @@ class AboutScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              onBack: () => context.go('/settings'),
-            ),
+            _Header(onBack: () => context.go('/settings')),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
@@ -69,10 +67,7 @@ class _Header extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Icon(
-            Icons.info_rounded,
-            color: Color(0xFFE53935),
-          ),
+          const Icon(Icons.info_rounded, color: Color(0xFFE53935)),
           const SizedBox(width: 10),
           const Text(
             'Hakkında',
@@ -98,10 +93,7 @@ class _AboutHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F6A3D),
-            Color(0xFF111111),
-          ],
+          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -115,10 +107,7 @@ class _AboutHero extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF1A1A1A),
-              border: Border.all(
-                color: const Color(0xFFE53935),
-                width: 3,
-              ),
+              border: Border.all(color: const Color(0xFFE53935), width: 3),
             ),
             child: const Center(
               child: Text(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../data/services/firebase/firebase_providers.dart';
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -32,8 +34,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  void _next() {
+  Future<void> _next() async {
     if (_currentPage == _items.length - 1) {
+      await appStateService.setOnboardingCompleted();
+      if (!mounted) return;
       context.go('/home');
     } else {
       _controller.nextPage(
@@ -43,7 +47,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _skip() {
+  Future<void> _skip() async {
+    await appStateService.setOnboardingCompleted();
+    if (!mounted) return;
     context.go('/home');
   }
 

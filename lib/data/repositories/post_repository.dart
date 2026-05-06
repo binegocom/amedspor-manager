@@ -20,6 +20,20 @@ class PostRepository {
         );
   }
 
+  Stream<List<PostModel>> watchUserPosts(String userId) {
+    return firestoreService.posts
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map((doc) => PostModel.fromMap(doc.id, doc.data()))
+              .toList();
+
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
+  }
+
   Future<PostModel?> getPost(String postId) async {
     final doc = await firestoreService.posts.doc(postId).get();
 
@@ -49,16 +63,11 @@ class PostRepository {
 
     await FirebaseFirestore.instance.runTransaction((transaction) async {
       transaction.set(commentRef, comment.toMap());
-      transaction.update(postRef, {
-        'commentsCount': FieldValue.increment(1),
-      });
+      transaction.update(postRef, {'commentsCount': FieldValue.increment(1)});
     });
   }
 
-  Future<void> toggleLike({
-    required String postId,
-    required bool liked,
-  }) async {
+  Future<void> toggleLike({required String postId, required bool liked}) async {
     await firestoreService.posts.doc(postId).update({
       'likes': FieldValue.increment(liked ? 1 : -1),
     });

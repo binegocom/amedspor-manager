@@ -90,7 +90,13 @@ service cloud.firestore {
 
     match /chatRooms/{roomId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.createdBy == request.auth.uid
+        );
 
       match /messages/{messageId} {
         allow read: if true;
@@ -116,6 +122,10 @@ service cloud.firestore {
 
       allow update, delete: if isAdmin();
     }
+    match /appSettings/{settingId} {
+  allow read: if true;
+  allow write: if isAdmin();
+}
 
     match /notifications/{notificationId} {
       allow read: if (
@@ -134,3 +144,4 @@ service cloud.firestore {
     }
   }
 }
+

@@ -13,9 +13,7 @@ class PolicyScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              onBack: () => context.go('/settings'),
-            ),
+            _Header(onBack: () => context.go('/settings')),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -72,10 +70,7 @@ class _Header extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Icon(
-            Icons.privacy_tip_rounded,
-            color: Color(0xFFE53935),
-          ),
+          const Icon(Icons.privacy_tip_rounded, color: Color(0xFFE53935)),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
@@ -103,10 +98,7 @@ class _PolicyHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F6A3D),
-            Color(0xFF111111),
-          ],
+          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -117,11 +109,7 @@ class _PolicyHero extends StatelessWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: Color(0xFFE53935),
-            child: Icon(
-              Icons.shield_rounded,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: Icon(Icons.shield_rounded, color: Colors.white, size: 30),
           ),
           SizedBox(width: 14),
           Expanded(
@@ -144,10 +132,7 @@ class _PolicySection extends StatelessWidget {
   final String title;
   final String text;
 
-  const _PolicySection({
-    required this.title,
-    required this.text,
-  });
+  const _PolicySection({required this.title, required this.text});
 
   @override
   Widget build(BuildContext context) {

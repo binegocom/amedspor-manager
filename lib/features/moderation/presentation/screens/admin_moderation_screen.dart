@@ -18,11 +18,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> {
 
   final reportRepository = ReportRepository();
 
-  final List<String> filters = const [
-    'Bekleyen',
-    'Çözülen',
-    'Reddedilen',
-  ];
+  final List<String> filters = const ['Bekleyen', 'Çözülen', 'Reddedilen'];
 
   List<ReportModel> _filterReports(List<ReportModel> reports) {
     return reports.where((report) {
@@ -69,10 +65,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> {
               Text(
                 '${report.targetType} için işlem seç.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  height: 1.5,
-                ),
+                style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
               ),
               const SizedBox(height: 22),
               _ActionButton(
@@ -121,14 +114,15 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              onBack: () => context.go('/settings'),
-            ),
+            _Header(onBack: () => context.go('/settings')),
 
             SizedBox(
               height: 54,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 scrollDirection: Axis.horizontal,
                 itemCount: filters.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
@@ -330,10 +324,7 @@ class _ReportCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               content,
-              style: const TextStyle(
-                color: Color(0xFFB3B3B3),
-                height: 1.4,
-              ),
+              style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.4),
             ),
             const SizedBox(height: 10),
             Text(
@@ -379,10 +370,7 @@ class _ActionButton extends StatelessWidget {
           ),
         ),
         icon: Icon(icon),
-        label: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
+        label: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
     );
   }
@@ -396,10 +384,7 @@ class _EmptyState extends StatelessWidget {
     return const Center(
       child: Text(
         'Bu filtrede rapor bulunmuyor.',
-        style: TextStyle(
-          color: Color(0xFFB3B3B3),
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: Color(0xFFB3B3B3), fontWeight: FontWeight.w600),
       ),
     );
   }

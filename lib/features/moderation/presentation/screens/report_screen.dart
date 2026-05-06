@@ -23,6 +23,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   final reportRepository = ReportRepository();
   final uuid = const Uuid();
+  bool isSubmitting = false;
 
   String selectedReason = 'Hakaret / Küfür';
 
@@ -35,6 +36,8 @@ class _ReportScreenState extends State<ReportScreen> {
   ];
 
   Future<void> _submitReport() async {
+    if (isSubmitting) return;
+
     final detail = detailController.text.trim();
     final user = authService.currentUser;
 
@@ -64,7 +67,21 @@ class _ReportScreenState extends State<ReportScreen> {
       createdAt: DateTime.now(),
     );
 
-    await reportRepository.createReport(report);
+    setState(() => isSubmitting = true);
+
+    try {
+      await reportRepository.createReport(report);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Rapor gonderilemedi. Lutfen tekrar deneyin.'),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
 
@@ -186,7 +203,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _submitReport,
+                  onPressed: isSubmitting ? null : _submitReport,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE53935),
                     foregroundColor: Colors.white,
@@ -194,10 +211,22 @@ class _ReportScreenState extends State<ReportScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'RAPORU GÖNDER',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'RAPORU GÖNDER',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
             ],

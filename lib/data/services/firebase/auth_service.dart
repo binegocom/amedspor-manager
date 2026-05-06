@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
@@ -7,6 +8,12 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
+  Future<void> initPersistence() async {
+    if (!kIsWeb) return;
+
+    await _auth.setPersistence(Persistence.LOCAL);
+  }
+
   Stream<User?> authStateChanges() {
     return _auth.authStateChanges();
   }
@@ -15,10 +22,7 @@ class AuthService {
     required String email,
     required String password,
   }) {
-    return _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   Future<UserCredential> registerWithEmail({
@@ -33,5 +37,9 @@ class AuthService {
 
   Future<void> signOut() {
     return _auth.signOut();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email);
   }
 }

@@ -26,6 +26,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
   final uuid = const Uuid();
 
   final List<String> scorers = const ['Ahmet', 'Baran', 'Rojhat', 'Serhat'];
+  bool isSubmitting = false;
 
   bool get isLoggedIn => authService.currentUser != null;
 
@@ -100,6 +101,8 @@ class _PredictionScreenState extends State<PredictionScreen> {
   }
 
   Future<void> _submitPrediction() async {
+    if (isSubmitting) return;
+
     final user = authService.currentUser;
 
     if (user == null) {
@@ -118,7 +121,21 @@ class _PredictionScreenState extends State<PredictionScreen> {
       createdAt: DateTime.now(),
     );
 
-    await predictionRepository.savePrediction(prediction);
+    setState(() => isSubmitting = true);
+
+    try {
+      await predictionRepository.savePrediction(prediction);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Tahmin kaydedilemedi. Lutfen tekrar deneyin.'),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
 
@@ -270,7 +287,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
                       width: double.infinity,
                       height: 54,
                       child: ElevatedButton(
-                        onPressed: _submitPrediction,
+                        onPressed: isSubmitting ? null : _submitPrediction,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE53935),
                           foregroundColor: Colors.white,
@@ -278,13 +295,22 @@ class _PredictionScreenState extends State<PredictionScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'TAHMİN YAP',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                          ),
-                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'TAHMİN YAP',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
                       ),
                     ),
                   ],

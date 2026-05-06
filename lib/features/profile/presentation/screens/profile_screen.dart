@@ -3,6 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../data/models/app_user_model.dart';
+import '../../../../data/models/lineup_model.dart';
+import '../../../../data/models/post_model.dart';
+import '../../../../data/models/prediction_model.dart';
+import '../../../../data/repositories/lineup_repository.dart';
+import '../../../../data/repositories/post_repository.dart';
+import '../../../../data/repositories/prediction_repository.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 
@@ -15,6 +21,9 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = authService.currentUser;
     final userRepository = UserRepository();
+    final postRepository = PostRepository();
+    final lineupRepository = LineupRepository();
+    final predictionRepository = PredictionRepository();
 
     if (user == null) {
       return Scaffold(
@@ -57,20 +66,25 @@ class ProfileScreen extends StatelessWidget {
                     );
                   }
 
-                  return _ProfileHero(user: appUser);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ProfileHero(user: appUser),
+                    const SizedBox(height: 18),
+                    _StatsGrid(
+                      userId: user.uid,
+                      postRepository: postRepository,
+                      lineupRepository: lineupRepository,
+                      predictionRepository: predictionRepository,
+                    ),
+                    const SizedBox(height: 18),
+                    const _SectionTitle(title: 'Rozetler'),
+                    const SizedBox(height: 12),
+                    _BadgesGrid(badges: appUser?.badges ?? const []),
+                  ],
+                );
                 },
               ),
-
-              const SizedBox(height: 18),
-
-              const _StatsGrid(),
-
-              const SizedBox(height: 18),
-
-              const _SectionTitle(title: 'Rozetler'),
-              const SizedBox(height: 12),
-
-              const _BadgesGrid(),
 
               const SizedBox(height: 18),
 
@@ -222,8 +236,11 @@ class _ProfileHero extends StatelessWidget {
                 child: _ProfileMiniStat(label: 'Puan', value: '$points'),
               ),
               const SizedBox(width: 12),
-              const Expanded(
-                child: _ProfileMiniStat(label: 'Sıra', value: '#23'),
+              Expanded(
+                child: _ProfileMiniStat(
+                  label: 'Sehir',
+                  value: user?.city.isNotEmpty == true ? user!.city : '-',
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -278,28 +295,61 @@ class _ProfileMiniStat extends StatelessWidget {
 }
 
 class _StatsGrid extends StatelessWidget {
-  const _StatsGrid();
+  final String userId;
+  final PostRepository postRepository;
+  final LineupRepository lineupRepository;
+  final PredictionRepository predictionRepository;
+
+  const _StatsGrid({
+    required this.userId,
+    required this.postRepository,
+    required this.lineupRepository,
+    required this.predictionRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.check_circle_rounded,
-            title: 'Tahmin',
-            value: '18',
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.groups_rounded,
-            title: 'Kadro',
-            value: '9',
-          ),
-        ),
-      ],
+    return StreamBuilder<List<PredictionModel>>(
+      stream: predictionRepository.watchUserPredictions(userId),
+      builder: (context, predictionSnapshot) {
+        return StreamBuilder<List<LineupModel>>(
+          stream: lineupRepository.watchUserLineups(userId),
+          builder: (context, lineupSnapshot) {
+            return StreamBuilder<List<PostModel>>(
+              stream: postRepository.watchUserPosts(userId),
+              builder: (context, postSnapshot) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.check_circle_rounded,
+                        title: 'Tahmin',
+                        value: '${predictionSnapshot.data?.length ?? 0}',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.groups_rounded,
+                        title: 'Kadro',
+                        value: '${lineupSnapshot.data?.length ?? 0}',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.article_rounded,
+                        title: 'Post',
+                        value: '${postSnapshot.data?.length ?? 0}',
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -352,24 +402,31 @@ class _StatCard extends StatelessWidget {
 }
 
 class _BadgesGrid extends StatelessWidget {
-  const _BadgesGrid();
+  final List<String> badges;
+
+  const _BadgesGrid({required this.badges});
 
   @override
   Widget build(BuildContext context) {
+    final visibleBadges = badges.isEmpty ? const ['Yeni Taraftar'] : badges;
+
     return GridView.count(
       crossAxisCount: 3,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      children: const [
+      children: visibleBadges
+          .map((badge) => _BadgeCard(icon: Icons.shield_rounded, title: badge))
+          .toList(),
+      /*
         _BadgeCard(icon: Icons.local_fire_department_rounded, title: 'Aktif'),
         _BadgeCard(icon: Icons.emoji_events_rounded, title: 'Usta'),
         _BadgeCard(icon: Icons.sports_soccer_rounded, title: 'Kadrocu'),
         _BadgeCard(icon: Icons.chat_bubble_rounded, title: 'Tribün'),
         _BadgeCard(icon: Icons.star_rounded, title: 'Yıldız'),
         _BadgeCard(icon: Icons.shield_rounded, title: 'Sadık'),
-      ],
+*/
     );
   }
 }

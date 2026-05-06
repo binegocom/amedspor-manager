@@ -4,10 +4,7 @@ import 'package:go_router/go_router.dart';
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
 
-  const AppBottomNav({
-    super.key,
-    required this.currentIndex,
-  });
+  const AppBottomNav({super.key, required this.currentIndex});
 
   void _goToTab(BuildContext context, int index) {
     if (index == currentIndex) return;

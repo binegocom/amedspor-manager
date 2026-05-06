@@ -38,4 +38,41 @@ class AppTheme {
       ),
     ),
   );
+
+  static ThemeData lightTheme = ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Roboto',
+    scaffoldBackgroundColor: AppColors.lightBackground,
+    colorScheme: const ColorScheme.light(
+      primary: AppColors.red,
+      secondary: AppColors.green,
+      surface: AppColors.lightCard,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.lightBackground,
+      foregroundColor: AppColors.lightTextPrimary,
+      elevation: 0,
+      centerTitle: false,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: AppColors.lightSurface,
+      selectedItemColor: AppColors.red,
+      unselectedItemColor: AppColors.lightTextSecondary,
+      type: BottomNavigationBarType.fixed,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.lightCard,
+      labelStyle: const TextStyle(color: AppColors.lightTextSecondary),
+      hintStyle: const TextStyle(color: AppColors.lightTextMuted),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: AppColors.lightBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: AppColors.red),
+      ),
+    ),
+  );
 }

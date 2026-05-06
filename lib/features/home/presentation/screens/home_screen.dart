@@ -148,10 +148,7 @@ class _MatchCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F6A3D),
-            Color(0xFF111111),
-          ],
+          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -275,8 +272,28 @@ class _TeamBadge extends StatelessWidget {
   }
 }
 
-class _QuestionCard extends StatelessWidget {
+class _QuestionCard extends StatefulWidget {
   const _QuestionCard();
+
+  @override
+  State<_QuestionCard> createState() => _QuestionCardState();
+}
+
+class _QuestionCardState extends State<_QuestionCard> {
+  bool? answer;
+
+  void _vote(bool value) {
+    setState(() => answer = value);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0F6A3D),
+        content: Text(
+          value ? 'Oyun kaydedildi: Evet' : 'Oyun kaydedildi: Hayir',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +319,7 @@ class _QuestionCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => _vote(true),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0F6A3D),
                     side: const BorderSide(color: Color(0xFF0F6A3D)),
@@ -310,13 +327,13 @@ class _QuestionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text('EVET'),
+                  child: Text(answer == true ? 'EVET ✓' : 'EVET'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => _vote(false),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFE53935),
                     side: const BorderSide(color: Color(0xFFE53935)),
@@ -324,7 +341,7 @@ class _QuestionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text('HAYIR'),
+                  child: Text(answer == false ? 'HAYIR ✓' : 'HAYIR'),
                 ),
               ),
             ],

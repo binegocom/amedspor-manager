@@ -11,6 +11,7 @@ class AppUserModel {
   final String city;
   final String supportYear;
   final String role;
+  final String? fcmToken;
 
   const AppUserModel({
     required this.id,
@@ -23,6 +24,7 @@ class AppUserModel {
     required this.city,
     required this.supportYear,
     required this.role,
+    this.fcmToken,
   });
 
   factory AppUserModel.fromMap(String id, Map<String, dynamic> map) {
@@ -37,6 +39,7 @@ class AppUserModel {
       city: map['city'] ?? '',
       supportYear: map['supportYear'] ?? '2024',
       role: map['role'] ?? 'user',
+      fcmToken: map['fcmToken'] as String?,
     );
   }
 
@@ -51,6 +54,7 @@ class AppUserModel {
       'city': city,
       'supportYear': supportYear,
       'role': role,
+      if (fcmToken != null) 'fcmToken': fcmToken,
     };
   }
 

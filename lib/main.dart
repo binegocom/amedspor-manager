@@ -9,23 +9,47 @@ import 'data/services/firebase/firebase_providers.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  await fcmService.init();
+  await authService.initPersistence();
   await pushNavigationService.init();
   foregroundNotificationService.init();
 
+  final darkMode = await appStateService.isDarkMode();
 
-  
-
-
-  runApp(const AmedsporApp());
+  runApp(AmedsporApp(initialDarkMode: darkMode));
 }
 
-class AmedsporApp extends StatelessWidget {
-  const AmedsporApp({super.key});
+class AmedsporApp extends StatefulWidget {
+  final bool initialDarkMode;
+
+  const AmedsporApp({super.key, this.initialDarkMode = true});
+
+  static AmedsporAppController of(BuildContext context) {
+    final state = context.findAncestorStateOfType<AmedsporAppController>();
+    if (state == null) {
+      throw StateError('AmedsporApp state not found');
+    }
+    return state;
+  }
+
+  @override
+  State<AmedsporApp> createState() => AmedsporAppController();
+}
+
+class AmedsporAppController extends State<AmedsporApp> {
+  late bool darkMode;
+
+  @override
+  void initState() {
+    super.initState();
+    darkMode = widget.initialDarkMode;
+  }
+
+  Future<void> setDarkMode(bool value) async {
+    setState(() => darkMode = value);
+    await appStateService.setDarkMode(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +57,9 @@ class AmedsporApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Amedspor',
       routerConfig: appRouter,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,11 +15,22 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final userRepository = UserRepository();
 
   bool isRegisterMode = false;
   bool obscurePassword = true;
+  bool isSubmitting = false;
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
+    if (isSubmitting) return;
+
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
@@ -32,6 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() => isSubmitting = true);
+
     try {
       if (isRegisterMode) {
         await authService.registerWithEmail(email: email, password: password);
@@ -40,14 +54,61 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
-      context.go('/profile-setup');
+
+      final user = authService.currentUser;
+      if (user == null) {
+        context.go('/login');
+        return;
+      }
+
+      final appUser = await userRepository.getUser(user.uid);
+
+      if (!mounted) return;
+      context.go(appUser == null ? '/profile-setup' : '/home');
     } catch (e) {
       if (!mounted) return;
+      setState(() => isSubmitting = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFFE53935),
           content: Text('Giriş hatası: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Sifre sifirlama icin email adresini yaz.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await authService.sendPasswordResetEmail(email);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF0F6A3D),
+          content: Text(
+            'Sifre sifirlama baglantisi email adresine gonderildi.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE53935),
+          content: Text('Sifre sifirlama hatasi: $e'),
         ),
       );
     }
@@ -161,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: _resetPassword,
                     child: const Text(
                       'Şifremi unuttum',
                       style: TextStyle(color: Color(0xFFB3B3B3)),
@@ -176,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: isSubmitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE53935),
                     foregroundColor: Colors.white,
@@ -184,53 +245,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(
-                    isRegisterMode ? 'KAYIT OL' : 'GİRİŞ YAP',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              Row(
-                children: const [
-                  Expanded(child: Divider(color: Colors.white12)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'veya',
-                      style: TextStyle(color: Color(0xFF777777)),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: Colors.white12)),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    context.go('/profile-setup');
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white24),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  icon: const Icon(Icons.g_mobiledata_rounded, size: 32),
-                  label: const Text(
-                    'Google ile devam et',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          isRegisterMode ? 'KAYIT OL' : 'GİRİŞ YAP',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
 

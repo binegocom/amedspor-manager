@@ -11,12 +11,14 @@ class PredictionRepository {
   Stream<List<PredictionModel>> watchUserPredictions(String userId) {
     return firestoreService.predictions
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          final items = snapshot.docs
               .map((doc) => PredictionModel.fromMap(doc.id, doc.data()))
-              .toList(),
-        );
+              .toList();
+
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
   }
 }

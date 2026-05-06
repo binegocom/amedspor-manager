@@ -26,10 +26,7 @@ class AppTextStyles {
     height: 1.45,
   );
 
-  static const caption = TextStyle(
-    color: AppColors.textMuted,
-    fontSize: 12,
-  );
+  static const caption = TextStyle(color: AppColors.textMuted, fontSize: 12);
 
   static const button = TextStyle(
     color: AppColors.textPrimary,

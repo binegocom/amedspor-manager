@@ -23,6 +23,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final uuid = const Uuid();
 
   String selectedCategory = 'Maç Yorumu';
+  bool isPublishing = false;
 
   final List<String> categories = const [
     'Maç Yorumu',
@@ -31,7 +32,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     'Tribün',
   ];
 
+  @override
+  void dispose() {
+    titleController.dispose();
+    contentController.dispose();
+    super.dispose();
+  }
+
   Future<void> _publishPost() async {
+    if (isPublishing) return;
+
     final title = titleController.text.trim();
     final content = contentController.text.trim();
     final user = authService.currentUser;
@@ -63,7 +73,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       createdAt: DateTime.now(),
     );
 
-    await postRepository.createPost(post);
+    setState(() => isPublishing = true);
+
+    try {
+      await postRepository.createPost(post);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isPublishing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Post yayinlanamadi. Lutfen tekrar deneyin.'),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
 
@@ -87,9 +111,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(
-                onBack: () => context.go('/feed'),
-              ),
+              _Header(onBack: () => context.go('/feed')),
 
               const SizedBox(height: 24),
 
@@ -106,10 +128,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
               const Text(
                 'Maç yorumu, kadro fikri veya tribün çağrısı paylaş.',
-                style: TextStyle(
-                  color: Color(0xFFB3B3B3),
-                  height: 1.5,
-                ),
+                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
               ),
 
               const SizedBox(height: 26),
@@ -192,10 +211,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
                   prefixIcon: const Padding(
                     padding: EdgeInsets.only(bottom: 126),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: Color(0xFF0F6A3D),
-                    ),
+                    child: Icon(Icons.edit_rounded, color: Color(0xFF0F6A3D)),
                   ),
                   filled: true,
                   fillColor: const Color(0xFF1A1A1A),
@@ -240,7 +256,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _publishPost,
+                  onPressed: isPublishing ? null : _publishPost,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE53935),
                     foregroundColor: Colors.white,
@@ -248,13 +264,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'YAYINLA',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
+                  child: isPublishing
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'YAYINLA',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
             ],

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,6 +27,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final imagePicker = ImagePicker();
 
   String selectedSupportYear = '2024';
+  bool isCompleting = false;
+  AppUserModel? existingUser;
 
   final List<String> supportYears = const [
     '2024',
@@ -37,6 +38,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     '2020',
     'Daha eski',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    final profile = await userRepository.getUser(user.uid);
+    if (!mounted || profile == null) return;
+
+    setState(() {
+      existingUser = profile;
+      usernameController.text = profile.username;
+      cityController.text = profile.city;
+      if (supportYears.contains(profile.supportYear)) {
+        selectedSupportYear = profile.supportYear;
+      }
+    });
+  }
 
   Future<void> _pickAvatar() async {
     final pickedFile = await imagePicker.pickImage(
@@ -52,6 +76,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _completeSetup() async {
+    if (isCompleting) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final username = usernameController.text.trim();
     final city = cityController.text.trim();
     final user = authService.currentUser;
@@ -71,38 +99,70 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
 
-    String avatarUrl = '';
+    setState(() => isCompleting = true);
 
-    if (selectedAvatar != null) {
-      avatarUrl = await storageService.uploadProfileAvatar(
-        userId: user.uid,
-        file: selectedAvatar!,
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+
+      String avatarUrl = existingUser?.avatarUrl ?? '';
+
+      if (selectedAvatar != null) {
+        avatarUrl = await storageService.uploadProfileAvatar(
+          userId: user.uid,
+          file: selectedAvatar!,
+        );
+      }
+
+      final fcmToken = await _safeFcmToken();
+
+      final appUser = AppUserModel(
+        id: user.uid,
+        username: username,
+        email: user.email ?? '',
+        avatarUrl: avatarUrl,
+        points: existingUser?.points ?? 0,
+        badges: existingUser?.badges.isNotEmpty == true
+            ? existingUser!.badges
+            : const ['Yeni Taraftar'],
+        createdAt: existingUser?.createdAt ?? DateTime.now(),
+        city: city,
+        supportYear: selectedSupportYear,
+        role: existingUser?.role ?? 'user',
+        fcmToken: fcmToken ?? existingUser?.fcmToken,
+      );
+
+      await userRepository.createOrUpdateUser(appUser);
+
+      if (!mounted) return;
+      context.go('/home');
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() => isCompleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Profil tamamlanamadi. Lutfen tekrar deneyin.'),
+        ),
       );
     }
+  }
 
-    final fcmToken = await fcmService.getToken();
+  Future<String?> _safeFcmToken() async {
+    try {
+      final permissionAlreadyAsked = await appStateService
+          .wasNotificationPermissionAsked();
 
-    await firestoreService.users.doc(user.uid).set({
-      'fcmToken': fcmToken,
-    }, SetOptions(merge: true));
+      if (!permissionAlreadyAsked) {
+        await fcmService.init();
+        await appStateService.setNotificationPermissionAsked();
+      }
 
-    final appUser = AppUserModel(
-      id: user.uid,
-      username: username,
-      email: user.email ?? '',
-      avatarUrl: avatarUrl,
-      points: 0,
-      badges: const ['Yeni Taraftar'],
-      createdAt: DateTime.now(),
-      city: city,
-      supportYear: selectedSupportYear,
-      role: 'user',
-    );
-
-    await userRepository.createOrUpdateUser(appUser);
-
-    if (!mounted) return;
-    context.go('/home');
+      return await fcmService.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -283,18 +343,32 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _completeSetup,
+                  onPressed: isCompleting ? null : _completeSetup,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE53935),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF7A2522),
+                    disabledForegroundColor: Colors.white70,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'PROFİLİ TAMAMLA',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
+                  child: isCompleting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'PROFİLİ TAMAMLA',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
 
@@ -302,7 +376,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
               Center(
                 child: TextButton(
-                  onPressed: () => context.go('/home'),
+                  onPressed: isCompleting ? null : () => context.go('/home'),
                   child: const Text(
                     'Sonra tamamla',
                     style: TextStyle(color: Color(0xFFB3B3B3)),

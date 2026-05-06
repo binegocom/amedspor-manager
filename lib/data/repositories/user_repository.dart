@@ -5,10 +5,9 @@ import '../services/firebase/firebase_providers.dart';
 
 class UserRepository {
   Future<void> createOrUpdateUser(AppUserModel user) async {
-    await firestoreService.users.doc(user.id).set(
-          user.toMap(),
-          SetOptions(merge: true),
-        );
+    await firestoreService.users
+        .doc(user.id)
+        .set(user.toMap(), SetOptions(merge: true));
   }
 
   Future<AppUserModel?> getUser(String userId) async {

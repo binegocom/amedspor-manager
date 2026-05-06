@@ -24,7 +24,9 @@ class SeedService {
         'id': 'match_001',
         'homeTeam': 'Amedspor',
         'awayTeam': 'Altay',
-        'matchDate': DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+        'matchDate': DateTime.now()
+            .add(const Duration(days: 3))
+            .toIso8601String(),
         'status': 'upcoming',
         'score': '',
       },
@@ -32,7 +34,9 @@ class SeedService {
         'id': 'match_002',
         'homeTeam': 'Amedspor',
         'awayTeam': 'Sakaryaspor',
-        'matchDate': DateTime.now().add(const Duration(days: 10)).toIso8601String(),
+        'matchDate': DateTime.now()
+            .add(const Duration(days: 10))
+            .toIso8601String(),
         'status': 'upcoming',
         'score': '',
       },
@@ -40,10 +44,10 @@ class SeedService {
 
     for (final match in matches) {
       final id = match['id'] as String;
-      await _db.collection('matches').doc(id).set(
-            match,
-            SetOptions(merge: true),
-          );
+      await _db
+          .collection('matches')
+          .doc(id)
+          .set(match, SetOptions(merge: true));
     }
   }
 
@@ -55,12 +59,7 @@ class SeedService {
         'type': 'general',
         'activeUsers': 0,
       },
-      {
-        'id': 'matchday',
-        'name': 'Maç Günü',
-        'type': 'match',
-        'activeUsers': 0,
-      },
+      {'id': 'matchday', 'name': 'Maç Günü', 'type': 'match', 'activeUsers': 0},
       {
         'id': 'transfer',
         'name': 'Transfer',
@@ -71,10 +70,10 @@ class SeedService {
 
     for (final room in rooms) {
       final id = room['id'] as String;
-      await _db.collection('chatRooms').doc(id).set(
-            room,
-            SetOptions(merge: true),
-          );
+      await _db
+          .collection('chatRooms')
+          .doc(id)
+          .set(room, SetOptions(merge: true));
     }
   }
 
@@ -89,7 +88,8 @@ class SeedService {
       'userId': 'system',
       'username': '@dijitaltribun',
       'title': 'Dijital Tribün Açıldı',
-      'content': 'Amedspor taraftarları artık burada kadro kurabilir, sohbet edebilir ve tahmin yapabilir.',
+      'content':
+          'Amedspor taraftarları artık burada kadro kurabilir, sohbet edebilir ve tahmin yapabilir.',
       'category': 'Tribün',
       'likes': 0,
       'commentsCount': 0,

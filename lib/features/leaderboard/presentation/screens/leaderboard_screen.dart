@@ -119,29 +119,27 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                       const SizedBox(height: 12),
 
-                      ...rest.asMap().entries.map(
-                        (entry) {
-                          final index = entry.key;
-                          final user = entry.value;
-                          final rank = index + 4;
+                      ...rest.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final user = entry.value;
+                        final rank = index + 4;
 
-                          return _LeaderTile(
-                            user: user,
-                            rank: rank,
-                            color: _rankColor(rank),
-                            isMe: currentUser != null &&
-                                user.id == currentUser.uid,
-                            onTap: () {
-                              if (currentUser != null &&
-                                  user.id == currentUser.uid) {
-                                context.go('/profile');
-                              } else {
-                                context.go('/profile/${user.id}');
-                              }
-                            },
-                          );
-                        },
-                      ),
+                        return _LeaderTile(
+                          user: user,
+                          rank: rank,
+                          color: _rankColor(rank),
+                          isMe:
+                              currentUser != null && user.id == currentUser.uid,
+                          onTap: () {
+                            if (currentUser != null &&
+                                user.id == currentUser.uid) {
+                              context.go('/profile');
+                            } else {
+                              context.go('/profile/${user.id}');
+                            }
+                          },
+                        );
+                      }),
                     ],
                   );
                 },
@@ -241,10 +239,7 @@ class _PodiumCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F6A3D),
-            Color(0xFF111111),
-          ],
+          colors: [Color(0xFF0F6A3D), Color(0xFF111111)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -305,8 +300,9 @@ class _PodiumUser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username =
-        user.username.startsWith('@') ? user.username : '@${user.username}';
+    final username = user.username.startsWith('@')
+        ? user.username
+        : '@${user.username}';
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -382,8 +378,9 @@ class _LeaderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final username =
-        user.username.startsWith('@') ? user.username : '@${user.username}';
+    final username = user.username.startsWith('@')
+        ? user.username
+        : '@${user.username}';
 
     final badge = user.badges.isEmpty ? 'Taraftar' : user.badges.first;
 
@@ -446,10 +443,7 @@ class _LeaderTile extends StatelessWidget {
             const SizedBox(width: 4),
             const Text(
               'puan',
-              style: TextStyle(
-                color: Color(0xFFB3B3B3),
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
             ),
           ],
         ),

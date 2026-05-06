@@ -32,7 +32,9 @@ class MyLineupsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/profile')),
+            _Header(
+              onBack: () => context.go('/profile'),
+            ),
             Expanded(
               child: StreamBuilder<List<LineupModel>>(
                 stream: lineupRepository.watchUserLineups(user.uid),
@@ -97,7 +99,10 @@ class _Header extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          const Icon(Icons.sports_soccer_rounded, color: Color(0xFFE53935)),
+          const Icon(
+            Icons.sports_soccer_rounded,
+            color: Color(0xFFE53935),
+          ),
           const SizedBox(width: 10),
           const Text(
             'Benim Kadrolarım',
@@ -117,7 +122,10 @@ class _LineupCard extends StatelessWidget {
   final LineupModel lineup;
   final VoidCallback onTap;
 
-  const _LineupCard({required this.lineup, required this.onTap});
+  const _LineupCard({
+    required this.lineup,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +190,10 @@ class _LineupCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white38,
+            ),
           ],
         ),
       ),

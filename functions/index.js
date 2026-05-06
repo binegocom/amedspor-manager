@@ -29,7 +29,7 @@ async function createInAppNotification({
     type,
     targetRoute,
     read: false,
-    createdAt: new Date().toISOString(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 }
 
@@ -137,7 +137,9 @@ exports.onMatchCreated = onDocumentCreated(
 
       const usersSnapshot = await db.collection("users").get();
 
-      const batch = db.batch();
+      const batches = [];
+      let batch = db.batch();
+      let count = 0;
 
       usersSnapshot.docs.forEach((userDoc) => {
         const ref = db.collection("notifications").doc();
@@ -149,11 +151,23 @@ exports.onMatchCreated = onDocumentCreated(
           type: "match",
           targetRoute: `/prediction/${matchId}`,
           read: false,
-          createdAt: new Date().toISOString(),
+          createdAt: FieldValue.serverTimestamp(),
         });
+
+        count++;
+        // Firestore batch limiti 500'dür, güvenli sınır olarak 499'da bölüyoruz.
+        if (count === 499) {
+          batches.push(batch.commit());
+          batch = db.batch();
+          count = 0;
+        }
       });
 
-      await batch.commit();
+      if (count > 0) {
+        batches.push(batch.commit());
+      }
+
+      await Promise.all(batches);
     },
 );
 
@@ -190,4 +204,3 @@ exports.onPredictionUpdated = onDocumentUpdated(
       });
     },
 );
-

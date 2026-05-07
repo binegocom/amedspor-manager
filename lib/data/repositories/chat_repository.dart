@@ -21,7 +21,8 @@ class ChatRepository {
   Stream<List<MessageModel>> watchMessages(String roomId) {
     return firestoreService
         .messages(roomId)
-        .orderBy('createdAt', descending: false)
+        .orderBy('createdAt', descending: true)
+        .limit(100)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs

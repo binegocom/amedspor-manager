@@ -120,7 +120,7 @@ class LineupRepository {
   }
 
   Stream<List<LineupModel>> watchAllLineups() {
-    return firestoreService.lineups.snapshots().map((snapshot) {
+    return firestoreService.lineups.limit(50).snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
           .toList();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,26 +38,44 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigateToNext() async {
     if (!mounted) return;
 
-    final onboardingCompleted = await appStateService.isOnboardingCompleted();
+    try {
+      final onboardingCompleted = await appStateService.isOnboardingCompleted();
 
-    if (!onboardingCompleted) {
+      if (!onboardingCompleted) {
+        if (!mounted) return;
+        context.go('/onboarding');
+        return;
+      }
+
+      final user = authService.currentUser;
+
+      if (user != null) {
+        // 🔥 Update daily login streak & award XP (Safely)
+        try {
+          await GamificationService().updateDailyLoginStreak(user.uid);
+        } catch (e) {
+          debugPrint('Splash: Gamification update failed: $e');
+        }
+
+        final appUser = await userRepository.getUser(user.uid);
+
+        if (!mounted) return;
+        if (appUser == null) {
+          context.go('/profile-setup');
+        } else {
+          context.go('/home');
+        }
+        return;
+      }
+
       if (!mounted) return;
-      context.go('/onboarding');
-      return;
+      context.go('/home');
+    } catch (e) {
+      debugPrint('Splash Navigation Error: $e');
+      if (mounted) {
+        context.go('/home'); // Safety fallback
+      }
     }
-
-    final user = authService.currentUser;
-
-    if (user != null) {
-      final appUser = await userRepository.getUser(user.uid);
-
-      if (!mounted) return;
-      context.go(appUser == null ? '/profile-setup' : '/home');
-      return;
-    }
-
-    if (!mounted) return;
-    context.go('/home');
   }
 
   @override

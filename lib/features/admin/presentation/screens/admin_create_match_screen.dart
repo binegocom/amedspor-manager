@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/match_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../widgets/admin_layout.dart';
+import 'admin_matches_screen.dart';
 
 class AdminCreateMatchScreen extends StatefulWidget {
   final String? matchId;
@@ -34,8 +35,15 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
   bool isLoaded = false;
   bool isSaving = false;
   bool isDeleting = false;
+  late Future<void> _loadFuture;
 
   bool get isEditing => widget.matchId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = _loadMatch();
+  }
 
   Future<void> _loadMatch() async {
     if (isLoaded || !isEditing) return;
@@ -46,20 +54,23 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
       return;
     }
 
-    homeTeamController.text = match.homeTeam;
-    awayTeamController.text = match.awayTeam;
-    homeLogoController.text = match.homeLogo;
-    awayLogoController.text = match.awayLogo;
-    homeScoreController.text = match.homeScore.toString();
-    awayScoreController.text = match.awayScore.toString();
-    selectedDate = match.matchDate;
-    selectedTime = TimeOfDay(
-      hour: match.matchDate.hour,
-      minute: match.matchDate.minute,
-    );
-    status = match.status;
-
-    isLoaded = true;
+    if (mounted) {
+      setState(() {
+        homeTeamController.text = match.homeTeam;
+        awayTeamController.text = match.awayTeam;
+        homeLogoController.text = match.homeLogo;
+        awayLogoController.text = match.awayLogo;
+        homeScoreController.text = match.homeScore.toString();
+        awayScoreController.text = match.awayScore.toString();
+        selectedDate = match.matchDate;
+        selectedTime = TimeOfDay(
+          hour: match.matchDate.hour,
+          minute: match.matchDate.minute,
+        );
+        status = match.status;
+        isLoaded = true;
+      });
+    }
   }
 
   Future<void> _pickDate() async {
@@ -222,35 +233,41 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _loadMatch(),
-      builder: (context, snapshot) {
-        return AdminLayout(
-          activeRoute: '/admin/matches',
-          title: isEditing ? 'Maçı Düzenle' : 'Yeni Maç Ekle',
-          subtitle: 'Maç bilgilerini, skorunu ve durumunu buradan yönet.',
-          actions: [
-            if (isEditing)
-              OutlinedButton.icon(
-                onPressed: isDeleting ? null : _deleteMatch,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFE53935),
-                  side: const BorderSide(color: Color(0xFFE53935)),
-                ),
-                icon: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFFE53935),
-                        ),
-                      )
-                    : const Icon(Icons.delete_rounded),
-                label: Text(isDeleting ? 'Siliniyor...' : 'Sil'),
-              ),
-          ],
-          child: SingleChildScrollView(
+    return AdminLayout(
+      activeRoute: AdminMatchesScreen.routePath,
+      title: isEditing ? 'Maçı Düzenle' : 'Yeni Maç Ekle',
+      subtitle: 'Maç bilgilerini, skorunu ve durumunu buradan yönet.',
+      actions: [
+        if (isEditing)
+          OutlinedButton.icon(
+            onPressed: isDeleting ? null : _deleteMatch,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFE53935),
+              side: const BorderSide(color: Color(0xFFE53935)),
+            ),
+            icon: isDeleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFE53935),
+                    ),
+                  )
+                : const Icon(Icons.delete_rounded),
+            label: Text(isDeleting ? 'Siliniyor...' : 'Sil'),
+          ),
+      ],
+      child: FutureBuilder<void>(
+        future: _loadFuture,
+        builder: (context, snapshot) {
+          if (isEditing && !isLoaded) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFE53935)),
+            );
+          }
+
+          return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Center(
               child: ConstrainedBox(
@@ -424,9 +441,9 @@ class _AdminCreateMatchScreenState extends State<AdminCreateMatchScreen> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

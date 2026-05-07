@@ -31,6 +31,7 @@ class QuestionRepository {
   Stream<List<QuestionModel>> watchQuestions() {
     return firestoreService.questions
         .orderBy('createdAt', descending: true)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

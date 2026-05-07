@@ -14,7 +14,10 @@ class PlayerRepository {
   }
 
   Stream<List<PlayerModel>> watchAllPlayers() {
-    return firestoreService.players.snapshots().map(
+    return firestoreService.players
+        .limit(100)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
               .map((doc) => PlayerModel.fromMap(doc.id, doc.data()))
               .toList(),

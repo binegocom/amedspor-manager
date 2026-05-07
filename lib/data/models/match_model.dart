@@ -63,7 +63,7 @@ class MatchModel {
       'awayTeam': awayTeam,
       'homeLogo': homeLogo,
       'awayLogo': awayLogo,
-      'matchDate': matchDate.toIso8601String(),
+      'matchDate': Timestamp.fromDate(matchDate),
       'status': status,
       'homeScore': homeScore,
       'awayScore': awayScore,

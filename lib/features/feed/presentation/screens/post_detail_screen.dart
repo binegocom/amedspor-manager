@@ -10,6 +10,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/login_required_modal.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String postId;
@@ -73,6 +74,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     try {
       await postRepository.addComment(postId: widget.postId, comment: comment);
+      
+      // 🔥 Award XP for commenting
+      await GamificationService().awardXp(
+        userId: user.uid,
+        amount: GamificationService.xpCommentCreated,
+        reason: 'Yorum yaptığın için',
+        eventType: 'comment_created',
+        sourceType: 'comment',
+        sourceId: comment.id,
+      );
+
       commentController.clear();
     } catch (_) {
       if (!mounted) return;

@@ -129,26 +129,28 @@ class _ReportScreenState extends State<ReportScreen> {
               ),
               const SizedBox(height: 24),
               _DarkCard(
-                child: Column(
-                  children: reasons.map((reason) {
-                    return RadioListTile<String>(
-                      value: reason,
-                      groupValue: selectedReason,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedReason = value);
-                      },
-                      activeColor: const Color(0xFFE53935),
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        reason,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                child: RadioGroup<String>(
+                  groupValue: selectedReason,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => selectedReason = value);
+                  },
+                  child: Column(
+                    children: reasons.map((reason) {
+                      return RadioListTile<String>(
+                        value: reason,
+                        activeColor: const Color(0xFFE53935),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          reason,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

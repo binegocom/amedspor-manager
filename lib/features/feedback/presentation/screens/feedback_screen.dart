@@ -76,17 +76,17 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.darkBackground,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Geri Bildirim'),
+          const PremiumHeader(title: 'Geri Bildirim', showBackButton: true),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Konu Seçin',
                     style: AppTextStyles.h3,
                   ),
@@ -101,10 +101,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary : AppColors.card,
+                              color: isSelected ? AppColors.primaryGreen : AppColors.surface,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isSelected ? AppColors.primary : Colors.white10,
+                                color: isSelected ? AppColors.primaryGreen : Colors.white10,
                               ),
                             ),
                             child: Column(
@@ -116,7 +116,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                                 const SizedBox(height: 8),
                                 Text(
                                   type['label'],
-                                  style: AppTextStyles.bodySmall.copyWith(
+                                  style: AppTextStyles.label.copyWith(
                                     color: isSelected ? Colors.white : AppColors.muted,
                                     fontSize: 10,
                                   ),
@@ -130,7 +130,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     }).toList(),
                   ),
                   const SizedBox(height: 32),
-                  Text(
+                  const Text(
                     'Mesajınız',
                     style: AppTextStyles.h3,
                   ),
@@ -142,7 +142,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     decoration: InputDecoration(
                       hintText: 'Sorunu veya önerinizi detaylıca açıklayın...',
                       hintStyle: const TextStyle(color: Colors.white24),
-                      fillColor: AppColors.card,
+                      fillColor: AppColors.surface,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),

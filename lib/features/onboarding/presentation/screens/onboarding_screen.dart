@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/theme/app_text_styles.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -50,68 +50,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Main Interactive Area
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _next,
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: _items.length,
-              onPageChanged: (index) {
-                setState(() => _currentPage = index);
-              },
-              itemBuilder: (context, index) {
-                final item = _items[index];
-
-                return Stack(
-                  children: [
-                    // Image Background (Original Quality)
-                    Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(item.image),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-
-                    const SafeArea(
-                      child: Column(
-                        children: [
-                          Spacer(),
+          PageView.builder(
+            controller: _controller,
+            itemCount: _items.length,
+            onPageChanged: (index) {
+              setState(() => _currentPage = index);
+            },
+            itemBuilder: (context, index) {
+              final item = _items[index];
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    item.image,
+                    fit: BoxFit.cover,
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.8),
                         ],
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(item.icon, color: const Color(0xFF0F6A3D), size: 48),
+                        const SizedBox(height: 24),
+                        Text(
+                          item.title,
+                          style: AppTextStyles.h1.copyWith(height: 1.1),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          item.description,
+                          style: AppTextStyles.bodyLarge.copyWith(color: Colors.white70),
+                        ),
+                        const SizedBox(height: 120),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-
-          // Bottom Indicators
           Positioned(
             bottom: 60,
-            left: 0,
-            right: 0,
-            child: Column(
+            left: 40,
+            right: 40,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Indicators
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     _items.length,
                     (index) => AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == index ? 24 : 8,
+                      margin: const EdgeInsets.only(right: 8),
+                      width: _currentPage == index ? 32 : 8,
                       height: 8,
                       decoration: BoxDecoration(
                         color: _currentPage == index
@@ -120,6 +130,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
+                  ),
+                ),
+                FloatingActionButton(
+                  onPressed: _next,
+                  backgroundColor: const Color(0xFF0F6A3D),
+                  child: Icon(
+                    _currentPage == _items.length - 1
+                        ? Icons.check_rounded
+                        : Icons.arrow_forward_rounded,
+                    color: Colors.white,
                   ),
                 ),
               ],

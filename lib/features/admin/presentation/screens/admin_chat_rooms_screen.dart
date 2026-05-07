@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import '../../../../core/theme/app_colors.dart';
 import '../../../../data/models/message_model.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminChatRoomsScreen extends StatefulWidget {
   const AdminChatRoomsScreen({super.key});
@@ -18,568 +17,257 @@ class AdminChatRoomsScreen extends StatefulWidget {
 
 class _AdminChatRoomsScreenState extends State<AdminChatRoomsScreen> {
   final chatRepository = ChatRepository();
-
   String selectedRoomId = 'general';
 
   final rooms = const [
-    _AdminRoom(id: 'general', title: 'Genel Sohbet', subtitle: 'Tüm taraftarlar'),
-    _AdminRoom(id: 'matchday', title: 'Maç Günü', subtitle: 'Maç önü ve maç anı'),
-    _AdminRoom(id: 'transfer', title: 'Transfer', subtitle: 'Transfer gündemi'),
+    _AdminRoom(id: 'general', title: 'Genel Sohbet', subtitle: 'Topluluk iletişimi'),
+    _AdminRoom(id: 'matchday', title: 'Maç Günü', subtitle: 'Canlı heyecan alanı'),
+    _AdminRoom(id: 'transfer', title: 'Transfer', subtitle: 'Fısıltı gazetesi'),
   ];
-
-  Future<void> _deleteMessage({
-    required String roomId,
-    required MessageModel message,
-  }) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text(
-            'Mesaj silinsin mi?',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: Text(
-            message.text,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFFB3B3B3)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Vazgeç'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                'Sil',
-                style: TextStyle(color: Color(0xFFE53935)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await firestoreService.messages(roomId).doc(message.id).delete();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF0F6A3D),
-          content: Text('Mesaj silindi.'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFE53935),
-          content: Text('Mesaj silme hatası: $e'),
-        ),
-      );
-    }
-  }
-
-  Future<void> _clearRoom(String roomId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text(
-            'Oda temizlensin mi?',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            'Bu odadaki son mesajlar silinecek. Bu işlem geri alınamaz.',
-            style: TextStyle(color: Color(0xFFB3B3B3)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Vazgeç'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                'Temizle',
-                style: TextStyle(color: Color(0xFFE53935)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm != true) return;
-
-    try {
-      bool hasMore = true;
-      while (hasMore) {
-        final snapshot = await firestoreService.messages(roomId).limit(500).get();
-        
-        if (snapshot.docs.isEmpty) {
-          hasMore = false;
-          break;
-        }
-
-        final batch = firestoreService.chatRooms.firestore.batch();
-        for (final doc in snapshot.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF0F6A3D),
-          content: Text('Oda temizlendi.'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFE53935),
-          content: Text('Oda temizleme hatası: $e'),
-        ),
-      );
-    }
-  }
-
-  Future<void> _toggleRoomLocked(String roomId) async {
-    final roomDoc = await firestoreService.chatRooms.doc(roomId).get();
-    final isLocked = roomDoc.data()?['locked'] == true;
-
-    try {
-      await firestoreService.chatRooms.doc(roomId).set(
-        {
-          'locked': !isLocked,
-        },
-        SetOptions(merge: true),
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF0F6A3D),
-          content: Text(!isLocked ? 'Oda kilitlendi.' : 'Oda açıldı.'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFFE53935),
-          content: Text('Oda güncelleme hatası: $e'),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Admin paneli çok geniş bir sidebar yapısına sahip olduğu için 
-    // sadece geniş ekranlarda (Web/Tablet) tam işlevsel çalışır.
-    final bool isLargeScreen = MediaQuery.of(context).size.width > 900;
+    return AdminLayout(
+      activeRoute: AdminChatRoomsScreen.routePath,
+      title: 'Sohbet Yönetimi',
+      subtitle: 'Oda durumlarını ve mesaj trafiğini profesyonelce denetleyin.',
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Oda Listesi (Sol Panel)
+            SizedBox(
+              width: 300,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: rooms.map((room) => _RoomSelectorCard(
+                    room: room,
+                    isActive: selectedRoomId == room.id,
+                    onTap: () => setState(() => selectedRoomId = room.id),
+                  )).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+            // Mesaj Akışı (Sağ Panel)
+            Expanded(
+              child: _ChatControlCenter(
+                roomId: selectedRoomId,
+                roomTitle: rooms.firstWhere((r) => r.id == selectedRoomId).title,
+                chatRepository: chatRepository,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-    if (!kIsWeb && !isLargeScreen) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0E0E0E),
-        body: Center(
-          child: Text(
-            'Admin paneli için geniş ekranlı bir cihaz gereklidir.',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+class _RoomSelectorCard extends StatelessWidget {
+  final _AdminRoom room;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _RoomSelectorCard({required this.room, required this.isActive, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primaryRed : const Color(0xFF161616),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isActive ? [BoxShadow(color: AppColors.primaryRed.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))] : [],
+          ),
+          child: Row(
+            children: [
+              Icon(isActive ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: isActive ? Colors.white : Colors.white38, size: 24),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(room.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                    Text(room.subtitle, style: TextStyle(color: isActive ? Colors.white70 : Colors.white24, fontSize: 11)),
+                  ],
+                ),
+              ),
+              if (isActive) const Icon(Icons.keyboard_double_arrow_right_rounded, color: Colors.white70, size: 18),
+            ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
-      body: Row(
+class _ChatControlCenter extends StatelessWidget {
+  final String roomId;
+  final String roomTitle;
+  final ChatRepository chatRepository;
+
+  const _ChatControlCenter({required this.roomId, required this.roomTitle, required this.chatRepository});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
         children: [
-          const _AdminSidebar(),
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Text(roomTitle, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                _ActionButton(
+                  label: 'TEMİZLE',
+                  icon: Icons.auto_delete_rounded,
+                  color: AppColors.errorRed,
+                  onTap: () => _showClearConfirm(context),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Colors.white10),
+          // Messages
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Sohbet Odaları',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                    ),
+            child: StreamBuilder<List<MessageModel>>(
+              stream: chatRepository.watchMessages(roomId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
+                final messages = snapshot.data!;
+                return ListView.separated(
+                  padding: const EdgeInsets.all(24),
+                  reverse: true, // Newest at bottom
+                  itemCount: messages.length,
+                  separatorBuilder: (_, index) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) => _AdminMessageRow(
+                    message: messages[index],
+                    onDelete: () => _deleteMessage(context, roomId, messages[index]),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Sohbet odalarını, mesajları ve oda durumlarını yönet.',
-                    style: TextStyle(
-                      color: Color(0xFFB3B3B3),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 320,
-                          child: ListView.separated(
-                            itemCount: rooms.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final room = rooms[index];
-
-                              return _RoomCard(
-                                room: room,
-                                active: selectedRoomId == room.id,
-                                onTap: () {
-                                  setState(() => selectedRoomId = room.id);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: _MessagesPanel(
-                            roomId: selectedRoomId,
-                            chatRepository: chatRepository,
-                            onDeleteMessage: (message) {
-                              _deleteMessage(
-                                roomId: selectedRoomId,
-                                message: message,
-                              );
-                            },
-                            onClearRoom: () => _clearRoom(selectedRoomId),
-                            onToggleRoomLocked: () {
-                              _toggleRoomLocked(selectedRoomId);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _MessagesPanel extends StatelessWidget {
-  final String roomId;
-  final ChatRepository chatRepository;
-  final ValueChanged<MessageModel> onDeleteMessage;
-  final VoidCallback onClearRoom;
-  final VoidCallback onToggleRoomLocked;
-
-  const _MessagesPanel({
-    required this.roomId,
-    required this.chatRepository,
-    required this.onDeleteMessage,
-    required this.onClearRoom,
-    required this.onToggleRoomLocked,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: firestoreService.chatRooms.doc(roomId).snapshots(),
-      builder: (context, roomSnapshot) {
-        final roomData = roomSnapshot.data?.data();
-        final isLocked = roomData?['locked'] == true;
-
-        return Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor:
-                        isLocked ? const Color(0xFFE53935) : const Color(0xFF0F6A3D),
-                    child: Icon(
-                      isLocked ? Icons.lock_rounded : Icons.forum_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Oda: $roomId',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: onToggleRoomLocked,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isLocked
-                          ? const Color(0xFF0F6A3D)
-                          : const Color(0xFFFFB300),
-                      side: BorderSide(
-                        color: isLocked
-                            ? const Color(0xFF0F6A3D)
-                            : const Color(0xFFFFB300),
-                      ),
-                    ),
-                    icon: Icon(
-                      isLocked ? Icons.lock_open_rounded : Icons.lock_rounded,
-                      size: 18,
-                    ),
-                    label: Text(isLocked ? 'Odayı Aç' : 'Kilitle'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: onClearRoom,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFE53935),
-                      side: const BorderSide(color: Color(0xFFE53935)),
-                    ),
-                    icon: const Icon(Icons.cleaning_services_rounded, size: 18),
-                    label: const Text('Temizle'),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              Expanded(
-                child: StreamBuilder<List<MessageModel>>(
-                  stream: chatRepository.watchMessages(roomId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFFE53935),
-                        ),
-                      );
-                    }
-
-                    final messages = snapshot.data ?? [];
-
-                    if (messages.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Bu odada mesaj yok.',
-                          style: TextStyle(
-                            color: Color(0xFFB3B3B3),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      itemCount: messages.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final message = messages[index];
-
-                        return _MessageCard(
-                          message: message,
-                          onDelete: () => onDeleteMessage(message),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  void _showClearConfirm(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Odayı Temizle', style: TextStyle(color: Colors.white)),
+        content: const Text('Bu odadaki son mesajlar silinecek. Onaylıyor musunuz?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Vazgeç')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Evet, Temizle', style: TextStyle(color: AppColors.errorRed))),
+        ],
+      ),
     );
+
+    if (confirm == true) {
+      final snapshot = await firestoreService.messages(roomId).limit(50).get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  void _deleteMessage(BuildContext context, String roomId, MessageModel message) async {
+    await chatRepository.deleteMessage(roomId: roomId, messageId: message.id);
   }
 }
 
-class _RoomCard extends StatelessWidget {
-  final _AdminRoom room;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _RoomCard({
-    required this.room,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: firestoreService.chatRooms.doc(room.id).snapshots(),
-      builder: (context, snapshot) {
-        final data = snapshot.data?.data();
-        final locked = data?['locked'] == true;
-
-        return InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: active ? const Color(0xFF0F6A3D) : const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: active ? const Color(0xFF0F6A3D) : Colors.white10,
-              ),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor:
-                      active ? Colors.white24 : const Color(0xFF0F6A3D),
-                  child: Icon(
-                    locked ? Icons.lock_rounded : Icons.forum_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        room.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        locked ? 'Kilitli • ${room.subtitle}' : room.subtitle,
-                        style: TextStyle(
-                          color: active
-                              ? Colors.white70
-                              : const Color(0xFFB3B3B3),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MessageCard extends StatelessWidget {
+class _AdminMessageRow extends StatelessWidget {
   final MessageModel message;
   final VoidCallback onDelete;
 
-  const _MessageCard({
-    required this.message,
-    required this.onDelete,
-  });
+  const _AdminMessageRow({required this.message, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    final hour = message.createdAt.hour.toString().padLeft(2, '0');
-    final minute = message.createdAt.minute.toString().padLeft(2, '0');
-
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
+        color: Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircleAvatar(
-            radius: 20,
-            backgroundColor: Color(0xFF0F6A3D),
-            child: Icon(Icons.person_rounded, color: Colors.white, size: 22),
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.2),
+            child: Text(message.username[0].toUpperCase(), style: const TextStyle(color: AppColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text(
-                      message.username,
-                      style: const TextStyle(
-                        color: Color(0xFFE53935),
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '$hour:$minute',
-                      style: const TextStyle(
-                        color: Color(0xFF777777),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
+                    Text(message.username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(width: 8),
+                    Text('${message.createdAt.hour}:${message.createdAt.minute.toString().padLeft(2, '0')}', style: const TextStyle(color: Colors.white24, fontSize: 10)),
                   ],
                 ),
-                const SizedBox(height: 7),
-                Text(
-                  message.text,
-                  style: const TextStyle(
-                    color: Color(0xFFB3B3B3),
-                    height: 1.4,
-                  ),
-                ),
+                const SizedBox(height: 4),
+                Text(message.text, style: const TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
           ),
-
-          const SizedBox(width: 10),
-
-          OutlinedButton.icon(
+          IconButton(
             onPressed: onDelete,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFE53935),
-              side: const BorderSide(color: Color(0xFFE53935)),
-            ),
-            icon: const Icon(Icons.delete_rounded, size: 18),
-            label: const Text('Sil'),
+            icon: const Icon(Icons.delete_forever_rounded, color: Colors.white24, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionButton({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      icon: Icon(icon, size: 16),
+      label: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -588,143 +276,5 @@ class _AdminRoom {
   final String id;
   final String title;
   final String subtitle;
-
-  const _AdminRoom({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-  });
-}
-
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          _SidebarItem(
-            icon: Icons.forum_rounded,
-            title: 'Sohbet',
-            active: true,
-            onTap: () => context.go('/admin/chats'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
+  const _AdminRoom({required this.id, required this.title, required this.subtitle});
 }

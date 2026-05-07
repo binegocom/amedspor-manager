@@ -6,6 +6,7 @@ import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../data/models/message_model.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String roomId;
@@ -68,6 +69,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await chatRepository.sendMessage(roomId: widget.roomId, message: message);
+
+      // 🔥 Award XP for matchday chat participation
+      if (widget.roomId == 'matchday') {
+        await GamificationService().awardXp(
+          userId: user.uid,
+          amount: GamificationService.xpChatMessageMatchday,
+          reason: 'Maç günü sohbetine katıldığın için',
+          eventType: 'chat_message_matchday',
+          sourceType: 'chat',
+          sourceId: message.id,
+        );
+      }
+
       _messageController.clear();
     } catch (_) {
       if (!mounted) return;

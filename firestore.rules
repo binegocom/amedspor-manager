@@ -12,19 +12,18 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return signedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isModerator() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator';
+      return signedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator';
     }
 
     function isStaff() {
-      return isAdmin() || isModerator();
+      return signedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
     function validUserRole() {
@@ -104,7 +103,7 @@ service cloud.firestore {
       allow read: if (
         signedIn()
         && resource.data.userId == request.auth.uid
-      ) || isAdmin();
+      ) || isStaff();
 
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid;
@@ -153,8 +152,8 @@ service cloud.firestore {
     }
 
     match /auditLogs/{logId} {
-      allow read: if isStaff();
-      allow create, update, delete: if isAdmin();
+      allow read, create: if isStaff();
+      allow update, delete: if isAdmin();
     }
 
     match /feedback/{feedbackId} {

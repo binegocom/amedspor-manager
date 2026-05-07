@@ -8,6 +8,7 @@ import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
 import '../../../../data/models/player_model.dart';
 import '../../../../data/repositories/player_repository.dart';
+import '../../../../data/services/firebase/firebase_providers.dart';
 import '../widgets/admin_layout.dart';
 
 class AdminPlayersScreen extends StatefulWidget {
@@ -61,7 +62,7 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: position,
+                      initialValue: position,
                       dropdownColor: AppColors.surface,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -132,6 +133,32 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
       title: 'Oyuncu Havuzu',
       subtitle: 'Kadro oluşturma için kullanılacak oyuncu listesi',
       actions: [
+        AppButton(
+          text: 'DEMO KADRO',
+          width: 160,
+          type: AppButtonType.secondary,
+          icon: Icons.auto_awesome_rounded,
+          onTap: () async {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            try {
+              await seedService.seedAmedspor2026Squad();
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  backgroundColor: AppColors.primaryGreen,
+                  content: Text('2025-2026 Sezonu Kadrosu Başarıyla Yüklendi!'),
+                ),
+              );
+            } catch (e) {
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.errorRed,
+                  content: Text('Hata: $e'),
+                ),
+              );
+            }
+          },
+        ),
+        const SizedBox(width: 12),
         AppButton(
           text: 'YENİ OYUNCU',
           width: 180,

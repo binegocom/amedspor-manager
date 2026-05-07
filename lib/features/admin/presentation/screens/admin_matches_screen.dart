@@ -125,7 +125,9 @@ class _AdminMatchCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 20),
-          Row(
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
             children: [
               IconButton(onPressed: onLive, icon: const Icon(Icons.live_tv_rounded, color: AppColors.primaryGreen), tooltip: 'Canlı Kontrol'),
               IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_rounded, color: AppColors.gold), tooltip: 'Düzenle'),

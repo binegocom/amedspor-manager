@@ -26,7 +26,7 @@ class ForceUpdateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -36,11 +36,11 @@ class ForceUpdateScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.primaryGreen.withValues(alpha: 0.2),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -49,11 +49,11 @@ class ForceUpdateScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.update_rounded,
                   size: 64,
-                  color: AppColors.primary,
+                  color: AppColors.primaryGreen,
                 ),
               ),
               const SizedBox(height: 48),
-              Text(
+              const Text(
                 'Güncelleme Gerekli',
                 style: AppTextStyles.h1,
                 textAlign: TextAlign.center,

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MessageModel {
   final String id;
   final String userId;
@@ -22,8 +24,18 @@ class MessageModel {
       username: map['username'] ?? '',
       text: map['text'] ?? '',
       likes: map['likes'] ?? 0,
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: _parseDate(map['createdAt']),
     );
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    } else {
+      return DateTime.now();
+    }
   }
 
   Map<String, dynamic> toMap() {
@@ -32,7 +44,7 @@ class MessageModel {
       'username': username,
       'text': text,
       'likes': likes,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }

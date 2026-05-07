@@ -11,7 +11,7 @@ import 'storage_service.dart';
 import 'fcm_service.dart';
 import 'push_navigation_service.dart';
 import 'foreground_notification_service.dart';
-import 'seed_service.dart';
+import '../seed_service.dart';
 import '../local/app_state_service.dart';
 import '../../repositories/user_repository.dart';
 

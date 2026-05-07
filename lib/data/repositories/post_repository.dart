@@ -13,15 +13,50 @@ class PostRepository {
     await firestoreService.posts.doc(post.id).set(post.toMap());
   }
 
-  Stream<List<PostModel>> watchPosts() {
+  Stream<List<PostModel>> watchPosts({int limit = 20}) {
     return firestoreService.posts
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => PostModel.fromMap(doc.id, doc.data()))
               .toList(),
         );
+  }
+
+  Future<List<PostModel>> getPostsPaginated({
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+  }) async {
+    Query query = firestoreService.posts
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs
+        .map((doc) => PostModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Helper to get raw documents for pagination
+  Future<QuerySnapshot> getPostsSnapshotPaginated({
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+  }) async {
+    Query query = firestoreService.posts
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+
+    return await query.get();
   }
 
   Stream<List<PostModel>> watchUserPosts(String userId) {

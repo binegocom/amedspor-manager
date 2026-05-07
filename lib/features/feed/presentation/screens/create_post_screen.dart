@@ -10,6 +10,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -88,6 +89,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       );
 
       await postRepository.createPost(post);
+
+      // 🔥 Award XP for creating post
+      await GamificationService().awardXp(
+        userId: user.uid,
+        amount: GamificationService.xpPostCreated,
+        reason: 'Post paylaştığın için',
+        eventType: 'post_created',
+        sourceType: 'post',
+        sourceId: postId,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => isPublishing = false);

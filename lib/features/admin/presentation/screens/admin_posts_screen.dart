@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
@@ -16,7 +18,11 @@ class AdminPostsScreen extends StatefulWidget {
 
 class _AdminPostsScreenState extends State<AdminPostsScreen> {
   final postRepository = PostRepository();
-
+  final List<PostModel> _posts = [];
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
   String searchQuery = '';
   String selectedCategory = 'Tümü';
 
@@ -27,6 +33,64 @@ class _AdminPostsScreenState extends State<AdminPostsScreen> {
     'Transfer',
     'Tribün',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMorePosts();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+      _loadMorePosts();
+    }
+  }
+
+  Future<void> _loadMorePosts({bool reset = false}) async {
+    if (_isLoading || (!_hasMore && !reset)) return;
+
+    setState(() => _isLoading = true);
+    if (reset) {
+      _posts.clear();
+      _lastDocument = null;
+      _hasMore = true;
+    }
+
+    try {
+      final snapshot = await postRepository.getPostsSnapshotPaginated(
+        limit: 20,
+        lastDocument: _lastDocument,
+      );
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final newPosts = snapshot.docs
+          .map((doc) => PostModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        _posts.addAll(newPosts);
+        _lastDocument = snapshot.docs.last;
+        _isLoading = false;
+        if (newPosts.length < 20) _hasMore = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   List<PostModel> _filterPosts(List<PostModel> posts) {
     final q = searchQuery.trim().toLowerCase();
@@ -81,6 +145,10 @@ class _AdminPostsScreenState extends State<AdminPostsScreen> {
     try {
       await firestoreService.posts.doc(post.id).delete();
 
+      setState(() {
+        _posts.removeWhere((p) => p.id == post.id);
+      });
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,12 +170,17 @@ class _AdminPostsScreenState extends State<AdminPostsScreen> {
   }
 
   Future<void> _toggleHidden(PostModel post) async {
-    final doc = await firestoreService.posts.doc(post.id).get();
-    final data = doc.data();
-    final isHidden = data?['hidden'] == true;
+    final isHidden = post.hidden;
 
     try {
       await firestoreService.posts.doc(post.id).update({'hidden': !isHidden});
+
+      setState(() {
+        final index = _posts.indexWhere((p) => p.id == post.id);
+        if (index != -1) {
+          _posts[index] = _posts[index].copyWith(hidden: !isHidden);
+        }
+      });
 
       if (!mounted) return;
 
@@ -219,49 +292,51 @@ class _AdminPostsScreenState extends State<AdminPostsScreen> {
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: StreamBuilder<List<PostModel>>(
-              stream: postRepository.watchPosts(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
+            child: _posts.isEmpty && _isLoading
+                ? const Center(
                     child: CircularProgressIndicator(
                       color: Color(0xFFE53935),
                     ),
-                  );
-                }
+                  )
+                : _posts.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Post bulunamadı.',
+                          style: TextStyle(
+                            color: Color(0xFFB3B3B3),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.only(bottom: 32),
+                        itemCount: _filterPosts(_posts).length + (_hasMore ? 1 : 0),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final filtered = _filterPosts(_posts);
+                          if (index == filtered.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFE53935),
+                                ),
+                              ),
+                            );
+                          }
 
-                final posts = _filterPosts(snapshot.data ?? []);
+                          final post = filtered[index];
 
-                if (posts.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'Post bulunamadı.',
-                      style: TextStyle(
-                        color: Color(0xFFB3B3B3),
-                        fontWeight: FontWeight.w600,
+                          return _AdminPostCard(
+                            post: post,
+                            onOpen: () => context.go('/post/${post.id}'),
+                            onToggleHidden: () => _toggleHidden(post),
+                            onDelete: () => _deletePost(post),
+                          );
+                        },
                       ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 32),
-                  itemCount: posts.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-
-                    return _AdminPostCard(
-                      post: post,
-                      onOpen: () => context.go('/post/${post.id}'),
-                      onToggleHidden: () => _toggleHidden(post),
-                      onDelete: () => _deletePost(post),
-                    );
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -282,20 +357,13 @@ class _AdminPostCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Future<bool> _isHidden() async {
-    final doc = await firestoreService.posts.doc(post.id).get();
-    return doc.data()?['hidden'] == true;
-  }
 
   @override
   Widget build(BuildContext context) {
     final hour = post.createdAt.hour.toString().padLeft(2, '0');
     final minute = post.createdAt.minute.toString().padLeft(2, '0');
 
-    return FutureBuilder<bool>(
-      future: _isHidden(),
-      builder: (context, snapshot) {
-        final isHidden = snapshot.data ?? false;
+    final isHidden = post.hidden;
 
         return Container(
           padding: const EdgeInsets.all(18),
@@ -308,7 +376,7 @@ class _AdminPostCard extends StatelessWidget {
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final compact = constraints.maxWidth < 780;
+              final compact = constraints.maxWidth < 900;
 
               final leading = CircleAvatar(
                 radius: 28,
@@ -472,15 +540,16 @@ class _AdminPostCard extends StatelessWidget {
                   leading,
                   const SizedBox(width: 16),
                   Expanded(child: details),
-                  const SizedBox(width: 12),
-                  actions,
+                  const SizedBox(width: 24),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 350),
+                    child: actions,
+                  ),
                 ],
               );
             },
           ),
         );
-      },
-    );
   }
 }
 

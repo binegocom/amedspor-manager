@@ -5,17 +5,24 @@ class AdminGuard {
     final user = authService.currentUser;
     if (user == null) return false;
 
-    final doc = await firestoreService.users.doc(user.uid).get();
-    return doc.data()?['role'] == 'admin';
+    try {
+      final doc = await firestoreService.users.doc(user.uid).get();
+      return doc.data()?['role'] == 'admin';
+    } catch (e) {
+      return false;
+    }
   }
 
   static Future<bool> isAdminOrModerator() async {
     final user = authService.currentUser;
     if (user == null) return false;
 
-    final doc = await firestoreService.users.doc(user.uid).get();
-    final role = doc.data()?['role'];
-
-    return role == 'admin' || role == 'moderator';
+    try {
+      final doc = await firestoreService.users.doc(user.uid).get();
+      final role = doc.data()?['role'];
+      return role == 'admin' || role == 'moderator';
+    } catch (e) {
+      return false;
+    }
   }
 }

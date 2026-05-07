@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,14 +14,23 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Firestore Settings
+  if (!kIsWeb) {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
 
+  // 3. Global Error Handling
   FlutterError.onError = ErrorReportingService.recordFlutterError;
-
   PlatformDispatcher.instance.onError = (error, stack) {
     ErrorReportingService.recordError(error, stack, fatal: true);
     return true;
   };
 
+  // 4. Initialization
   await authService.initPersistence();
   await pushNavigationService.init();
   foregroundNotificationService.init();

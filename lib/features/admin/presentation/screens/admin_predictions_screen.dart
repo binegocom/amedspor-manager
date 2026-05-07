@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../data/repositories/prediction_repository.dart';
 import '../../../../data/models/prediction_model.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminPredictionsScreen extends StatefulWidget {
   const AdminPredictionsScreen({super.key});
@@ -16,29 +17,83 @@ class AdminPredictionsScreen extends StatefulWidget {
 }
 
 class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
+  final _repository = PredictionRepository();
+  final List<DocumentSnapshot> _docs = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
   String selectedFilter = 'all';
 
-  Stream<List<PredictionModel>> _watchPredictions() {
-    return firestoreService.predictions
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => PredictionModel.fromMap(doc.id, doc.data()))
-              .toList(),
-        );
+  @override
+  void initState() {
+    super.initState();
+    _loadMore();
+    _scrollController.addListener(_onScroll);
   }
 
-  List<PredictionModel> _filterPredictions(List<PredictionModel> predictions) {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoading || !_hasMore) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final snapshot = await _repository.getPredictionsSnapshotPaginated(
+        limit: 20,
+        lastDocument: _docs.isEmpty ? null : _docs.last,
+      );
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _docs.addAll(snapshot.docs);
+        _isLoading = false;
+        if (snapshot.docs.length < 20) _hasMore = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  List<DocumentSnapshot> _filterDocs() {
     if (selectedFilter == 'scored') {
-      return predictions.where((item) => item.pointsEarned > 0).toList();
+      return _docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return (data['pointsEarned'] ?? 0) > 0;
+      }).toList();
     }
 
     if (selectedFilter == 'pending') {
-      return predictions.where((item) => item.pointsEarned == 0).toList();
+      return _docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return (data['pointsEarned'] ?? 0) == 0;
+      }).toList();
     }
 
-    return predictions;
+    return _docs;
   }
 
   Future<void> _updatePredictionPoints({
@@ -47,16 +102,13 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
   }) async {
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final predictionRef =
-            firestoreService.predictions.doc(prediction.id);
+        final predictionRef = firestoreService.predictions.doc(prediction.id);
         final userRef = firestoreService.users.doc(prediction.userId);
 
         final predictionDoc = await transaction.get(predictionRef);
         final oldPoints = predictionDoc.data()?['pointsEarned'] ?? 0;
 
-        transaction.update(predictionRef, {
-          'pointsEarned': points,
-        });
+        transaction.update(predictionRef, {'pointsEarned': points});
 
         transaction.update(userRef, {
           'points': FieldValue.increment(points - oldPoints),
@@ -139,10 +191,17 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
 
     if (points == null) return;
 
-    await _updatePredictionPoints(
-      prediction: prediction,
-      points: points,
-    );
+    await _updatePredictionPoints(prediction: prediction, points: points);
+
+    // Refresh list locally or wait for re-fetch (simplest is re-fetch or manual update)
+    // For now we assume the transaction finished and we can update the local doc
+    setState(() {
+      final index = _docs.indexWhere((doc) => doc.id == prediction.id);
+      if (index != -1) {
+        // We can't easily update DocumentSnapshot data, but in this specific UI
+        // we can just re-fetch the first page to show changes.
+      }
+    });
   }
 
   Future<void> _deletePrediction(PredictionModel prediction) async {
@@ -180,8 +239,7 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
 
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final predictionRef =
-            firestoreService.predictions.doc(prediction.id);
+        final predictionRef = firestoreService.predictions.doc(prediction.id);
         final userRef = firestoreService.users.doc(prediction.userId);
 
         transaction.delete(predictionRef);
@@ -191,6 +249,10 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
             'points': FieldValue.increment(-prediction.pointsEarned),
           });
         }
+      });
+
+      setState(() {
+        _docs.removeWhere((doc) => doc.id == prediction.id);
       });
 
       if (!mounted) return;
@@ -225,126 +287,89 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kIsWeb) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0E0E0E),
-        body: Center(
-          child: Text(
-            'Admin panel sadece web üzerinde kullanılabilir.',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
+    final filteredDocs = _filterDocs();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0E0E0E),
-      body: Row(
+    return AdminLayout(
+      activeRoute: AdminPredictionsScreen.routePath,
+      title: 'Tahmin Yönetimi',
+      subtitle:
+          'Kullanıcı tahminlerini görüntüle, puan gir ve sıralamayı güncelle.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _AdminSidebar(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Wrap(
+              spacing: 10,
+              children: [
+                _FilterChip(
+                  title: 'Tümü',
+                  active: selectedFilter == 'all',
+                  onTap: () => setState(() => selectedFilter = 'all'),
+                ),
+                _FilterChip(
+                  title: 'Bekleyen',
+                  active: selectedFilter == 'pending',
+                  onTap: () => setState(() => selectedFilter = 'pending'),
+                ),
+                _FilterChip(
+                  title: 'Puanlanan',
+                  active: selectedFilter == 'scored',
+                  onTap: () => setState(() => selectedFilter = 'scored'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Tahmin Yönetimi',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
+            child: _docs.isEmpty && _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFE53935)),
+                  )
+                : filteredDocs.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Tahmin bulunamadı.',
+                      style: TextStyle(
+                        color: Color(0xFFB3B3B3),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Kullanıcı tahminlerini görüntüle, puan gir ve sıralamayı güncelle.',
-                    style: TextStyle(
-                      color: Color(0xFFB3B3B3),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Wrap(
-                    spacing: 10,
-                    children: [
-                      _FilterChip(
-                        title: 'Tümü',
-                        active: selectedFilter == 'all',
-                        onTap: () => setState(() => selectedFilter = 'all'),
-                      ),
-                      _FilterChip(
-                        title: 'Bekleyen',
-                        active: selectedFilter == 'pending',
-                        onTap: () => setState(() => selectedFilter = 'pending'),
-                      ),
-                      _FilterChip(
-                        title: 'Puanlanan',
-                        active: selectedFilter == 'scored',
-                        onTap: () => setState(() => selectedFilter = 'scored'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: StreamBuilder<List<PredictionModel>>(
-                      stream: _watchPredictions(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
+                  )
+                : ListView.separated(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    itemCount: filteredDocs.length + (_hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      if (index == filteredDocs.length) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
                             child: CircularProgressIndicator(
                               color: Color(0xFFE53935),
                             ),
-                          );
-                        }
-
-                        final predictions =
-                            _filterPredictions(snapshot.data ?? []);
-
-                        if (predictions.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'Tahmin bulunamadı.',
-                              style: TextStyle(
-                                color: Color(0xFFB3B3B3),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          );
-                        }
-
-                        return ListView.separated(
-                          itemCount: predictions.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final prediction = predictions[index];
-
-                            return _PredictionAdminCard(
-                              prediction: prediction,
-                              statusColor: _statusColor(prediction),
-                              statusText: _statusText(prediction),
-                              onOpenMatch: () {
-                                context.go(
-                                  '/prediction/${prediction.matchId}',
-                                );
-                              },
-                              onEditPoints: () {
-                                _openPointDialog(prediction);
-                              },
-                              onDelete: () {
-                                _deletePrediction(prediction);
-                              },
-                            );
-                          },
+                          ),
                         );
-                      },
-                    ),
+                      }
+
+                      final doc = filteredDocs[index];
+                      final prediction = PredictionModel.fromMap(
+                        doc.id,
+                        doc.data() as Map<String, dynamic>,
+                      );
+
+                      return _PredictionAdminCard(
+                        prediction: prediction,
+                        statusColor: _statusColor(prediction),
+                        statusText: _statusText(prediction),
+                        onOpenMatch: () =>
+                            context.go('/prediction/${prediction.matchId}'),
+                        onEditPoints: () => _openPointDialog(prediction),
+                        onDelete: () => _deletePrediction(prediction),
+                      );
+                    },
                   ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -381,115 +406,141 @@ class _PredictionAdminCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white10),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 900;
+
+          final leading = CircleAvatar(
             radius: 28,
             backgroundColor: statusColor.withValues(alpha: 0.18),
             child: Icon(Icons.emoji_events_rounded, color: statusColor),
-          ),
-          const SizedBox(width: 16),
+          );
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _MiniBadge(text: statusText, color: statusColor),
-                    const SizedBox(width: 8),
-                    _MiniBadge(
-                      text: 'Maç: ${prediction.matchId}',
-                      color: const Color(0xFF0F6A3D),
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _MiniBadge(text: statusText, color: statusColor),
+                  _MiniBadge(
+                    text: 'Maç: ${prediction.matchId}',
+                    color: const Color(0xFF0F6A3D),
+                  ),
+                  Text(
+                    '$hour:$minute',
+                    style: const TextStyle(
+                      color: Color(0xFF777777),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$hour:$minute',
-                      style: const TextStyle(
-                        color: Color(0xFF777777),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Tahmin: ${prediction.homeScore} - ${prediction.awayScore}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Tahmin: ${prediction.homeScore} - ${prediction.awayScore}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'İlk gol: ${prediction.firstScorer.isEmpty ? 'Seçilmedi' : prediction.firstScorer}',
-                  style: const TextStyle(
-                    color: Color(0xFFB3B3B3),
-                    height: 1.4,
-                  ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'İlk gol: ${prediction.firstScorer.isEmpty ? 'Seçilmedi' : prediction.firstScorer}',
+                style: const TextStyle(color: Color(0xFFB3B3B3), height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Kullanıcı ID: ${prediction.userId}',
+                style: const TextStyle(
+                  color: Color(0xFFE53935),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Kullanıcı ID: ${prediction.userId}',
-                  style: const TextStyle(
-                    color: Color(0xFFE53935),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            ],
+          );
 
-          const SizedBox(width: 12),
-
-          Text(
+          final pointsDisplay = Text(
             '${prediction.pointsEarned} puan',
             style: const TextStyle(
               color: Color(0xFFFFB300),
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
-          ),
+          );
 
-          const SizedBox(width: 14),
+          final actions = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: onOpenMatch,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF0F6A3D)),
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('Aç'),
+              ),
+              ElevatedButton.icon(
+                onPressed: onEditPoints,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE53935),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.edit_rounded, size: 18),
+                label: const Text('Puan'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onDelete,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFE53935),
+                  side: const BorderSide(color: Color(0xFFE53935)),
+                ),
+                icon: const Icon(Icons.delete_rounded, size: 18),
+                label: const Text('Sil'),
+              ),
+            ],
+          );
 
-          OutlinedButton.icon(
-            onPressed: onOpenMatch,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFF0F6A3D)),
-            ),
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
-            label: const Text('Aç'),
-          ),
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    leading,
+                    const SizedBox(width: 16),
+                    Expanded(child: details),
+                    const SizedBox(width: 12),
+                    pointsDisplay,
+                  ],
+                ),
+                const SizedBox(height: 16),
+                actions,
+              ],
+            );
+          }
 
-          const SizedBox(width: 8),
-
-          ElevatedButton.icon(
-            onPressed: onEditPoints,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE53935),
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.edit_rounded, size: 18),
-            label: const Text('Puan'),
-          ),
-
-          const SizedBox(width: 8),
-
-          OutlinedButton.icon(
-            onPressed: onDelete,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFE53935),
-              side: const BorderSide(color: Color(0xFFE53935)),
-            ),
-            icon: const Icon(Icons.delete_rounded, size: 18),
-            label: const Text('Sil'),
-          ),
-        ],
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              leading,
+              const SizedBox(width: 16),
+              Expanded(child: details),
+              const SizedBox(width: 12),
+              pointsDisplay,
+              const SizedBox(width: 24),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
@@ -536,10 +587,7 @@ class _MiniBadge extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _MiniBadge({
-    required this.text,
-    required this.color,
-  });
+  const _MiniBadge({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -555,144 +603,6 @@ class _MiniBadge extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.w900,
           fontSize: 12,
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          _SidebarItem(
-            icon: Icons.forum_rounded,
-            title: 'Sohbet',
-            onTap: () => context.go('/admin/chats'),
-          ),
-          _SidebarItem(
-            icon: Icons.emoji_events_rounded,
-            title: 'Tahminler',
-            active: true,
-            onTap: () => context.go('/admin/predictions'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
         ),
       ),
     );

@@ -11,7 +11,7 @@ class AccountDisabledScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -21,11 +21,11 @@ class AccountDisabledScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.error.withOpacity(0.2),
+                      color: AppColors.errorRed.withValues(alpha: 0.2),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -34,11 +34,11 @@ class AccountDisabledScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.block_rounded,
                   size: 64,
-                  color: AppColors.error,
+                  color: AppColors.errorRed,
                 ),
               ),
               const SizedBox(height: 48),
-              Text(
+              const Text(
                 'Hesabınız Askıya Alındı',
                 style: AppTextStyles.h1,
                 textAlign: TextAlign.center,
@@ -56,7 +56,7 @@ class AccountDisabledScreen extends StatelessWidget {
                   await authService.signOut();
                   if (context.mounted) context.go('/login');
                 },
-                type: AppButtonType.secondary,
+                type: AppButtonType.outline,
               ),
             ],
           ),

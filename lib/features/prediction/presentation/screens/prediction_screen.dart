@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../data/models/prediction_model.dart';
 import '../../../../data/repositories/prediction_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class PredictionScreen extends StatefulWidget {
   final String matchId;
@@ -125,6 +126,16 @@ class _PredictionScreenState extends State<PredictionScreen> {
 
     try {
       await predictionRepository.savePrediction(prediction);
+
+      // 🔥 Award XP for submitting prediction
+      await GamificationService().awardXp(
+        userId: user.uid,
+        amount: GamificationService.xpPredictionCreated,
+        reason: 'Tahmin yaptığın için',
+        eventType: 'prediction_created',
+        sourceType: 'prediction',
+        sourceId: prediction.id,
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => isSubmitting = false);

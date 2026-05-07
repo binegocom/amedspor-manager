@@ -70,4 +70,38 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> lineupLikes(String lineupId) {
     return lineups.doc(lineupId).collection('likes');
   }
+
+  // Gamification Collections
+  CollectionReference<Map<String, dynamic>> get badges =>
+      _db.collection('badges');
+
+  CollectionReference<Map<String, dynamic>> get missions =>
+      _db.collection('missions');
+
+  CollectionReference<Map<String, dynamic>> get seasons =>
+      _db.collection('seasons');
+
+  CollectionReference<Map<String, dynamic>> get gamificationRules =>
+      _db.collection('gamificationRules');
+
+  // User-specific Gamification Subcollections
+  CollectionReference<Map<String, dynamic>> userBadges(String userId) {
+    return users.doc(userId).collection('badges');
+  }
+
+  CollectionReference<Map<String, dynamic>> userXpEvents(String userId) {
+    return users.doc(userId).collection('xpEvents');
+  }
+
+  CollectionReference<Map<String, dynamic>> userMissions(String userId) {
+    return users.doc(userId).collection('missions');
+  }
+
+  CollectionReference<Map<String, dynamic>> userStreaks(String userId) {
+    return users.doc(userId).collection('streaks');
+  }
+
+  CollectionReference<Map<String, dynamic>> userSeasonStats(String userId) {
+    return users.doc(userId).collection('seasonStats');
+  }
 }

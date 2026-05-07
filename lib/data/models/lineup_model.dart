@@ -6,6 +6,7 @@ class LineupModel {
   final String matchId;
   final String formation;
   final List<Map<String, dynamic>> players;
+  final List<Map<String, dynamic>> substitutes;
   final int likes;
   final int power;
   final int commentsCount;
@@ -17,6 +18,7 @@ class LineupModel {
     required this.matchId,
     required this.formation,
     required this.players,
+    required this.substitutes,
     required this.likes,
     required this.power,
     required this.commentsCount,
@@ -30,6 +32,7 @@ class LineupModel {
       matchId: map['matchId'] ?? '',
       formation: map['formation'] ?? '4-3-3',
       players: List<Map<String, dynamic>>.from(map['players'] ?? []),
+      substitutes: List<Map<String, dynamic>>.from(map['substitutes'] ?? []),
       likes: map['likes'] ?? 0,
       power: map['power'] ?? 0,
       commentsCount: map['commentsCount'] ?? 0,
@@ -43,6 +46,7 @@ class LineupModel {
       'matchId': matchId,
       'formation': formation,
       'players': players,
+      'substitutes': substitutes,
       'likes': likes,
       'power': power,
       'commentsCount': commentsCount,

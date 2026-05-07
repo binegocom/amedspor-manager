@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -69,18 +70,23 @@ class _GlobalAppGuardState extends State<GlobalAppGuard> {
     _authSub = authService.authStateChanges().listen((user) {
       _userSub?.cancel();
       if (user != null) {
-        _userSub = firestoreService.users.doc(user.uid).snapshots().listen((doc) {
-          if (!doc.exists) return;
-          final data = doc.data();
-          if (data == null) return;
+        _userSub = firestoreService.users.doc(user.uid).snapshots().listen(
+          (doc) {
+            if (!doc.exists) return;
+            final data = doc.data();
+            if (data == null) return;
 
-          if (mounted) {
-            setState(() {
-              _isBanned = data['disabled'] == true;
-              _isAdmin = data['role'] == 'admin' || data['role'] == 'moderator';
-            });
-          }
-        });
+            if (mounted) {
+              setState(() {
+                _isBanned = data['disabled'] == true;
+                _isAdmin = data['role'] == 'admin' || data['role'] == 'moderator';
+              });
+            }
+          },
+          onError: (error) {
+            debugPrint('GlobalAppGuard: User sub error: $error');
+          },
+        );
       } else {
         if (mounted) {
           setState(() {
@@ -93,28 +99,33 @@ class _GlobalAppGuardState extends State<GlobalAppGuard> {
   }
 
   void _listenToAppSettings() {
-    _appSettingsSub = firestoreService.appSettings.doc('main').snapshots().listen((doc) {
-      if (!doc.exists) return;
-      final data = doc.data();
-      if (data == null) return;
+    _appSettingsSub = firestoreService.appSettings.doc('main').snapshots().listen(
+      (doc) {
+        if (!doc.exists) return;
+        final data = doc.data();
+        if (data == null) return;
 
-      if (mounted) {
-        setState(() {
-          _isMaintenanceMode = data['maintenanceMode'] == true;
-          
-          String minVersion = '0.0.0';
-          if (kIsWeb) {
-            minVersion = data['minimumWebVersion'] ?? '0.0.0';
-          } else if (Theme.of(context).platform == TargetPlatform.android) {
-            minVersion = data['minimumAndroidVersion'] ?? '0.0.0';
-          } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-            minVersion = data['minimumIosVersion'] ?? '0.0.0';
-          }
+        if (mounted) {
+          setState(() {
+            _isMaintenanceMode = data['maintenanceMode'] == true;
+            
+            String minVersion = '0.0.0';
+            if (kIsWeb) {
+              minVersion = data['minimumWebVersion'] ?? '0.0.0';
+            } else if (Theme.of(context).platform == TargetPlatform.android) {
+              minVersion = data['minimumAndroidVersion'] ?? '0.0.0';
+            } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+              minVersion = data['minimumIosVersion'] ?? '0.0.0';
+            }
 
-          _isForceUpdate = _shouldForceUpdate(_currentAppVersion, minVersion);
-        });
-      }
-    });
+            _isForceUpdate = _shouldForceUpdate(_currentAppVersion, minVersion);
+          });
+        }
+      },
+      onError: (error) {
+        debugPrint('GlobalAppGuard: AppSettings sub error: $error');
+      },
+    );
   }
 
   bool _shouldForceUpdate(String current, String required) {

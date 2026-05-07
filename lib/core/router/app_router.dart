@@ -15,6 +15,7 @@ import '../../features/admin/presentation/screens/admin_send_notification_screen
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/admin/presentation/screens/admin_players_screen.dart';
+import '../../features/admin/presentation/screens/admin_gamification_screen.dart';
 import '../../features/admin/presentation/screens/admin_lineups_screen.dart';
 import '../../features/admin/presentation/screens/admin_live_match_screen.dart';
 import '../../features/admin/presentation/screens/admin_questions_screen.dart';
@@ -28,7 +29,7 @@ import '../../features/auth/presentation/screens/profile_setup_screen.dart';
 // Feature Screens
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/feedback/presentation/screens/feedback_screen.dart';
-import '../../features/account/presentation/screens/delete_account_screen.dart';
+import '../../features/profile/presentation/screens/delete_account_screen.dart';
 import '../../features/blocking/presentation/screens/blocked_users_screen.dart';
 import '../../features/feed/presentation/screens/create_post_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
@@ -40,10 +41,12 @@ import '../../features/lineup/presentation/screens/lineup_detail_screen.dart';
 import '../../features/lineup/presentation/screens/my_lineups_screen.dart';
 import '../../features/lineup/presentation/screens/top_lineups_screen.dart';
 import '../../features/matches/presentation/screens/matches_screen.dart';
-import '../../features/match/presentation/screens/live_match_center_screen.dart';
+import '../../features/matches/presentation/screens/live_match_center_screen.dart';
 import '../../features/moderation/presentation/screens/report_screen.dart';
 import '../../features/moderation/presentation/screens/reports_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/gamification/presentation/screens/badges_screen.dart';
+import '../../features/gamification/presentation/screens/missions_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/prediction/presentation/screens/my_predictions_screen.dart';
 import '../../features/prediction/presentation/screens/prediction_screen.dart';
@@ -209,6 +212,14 @@ final appRouter = GoRouter(
       builder: (context, state) => const ProfileScreen(),
     ),
     GoRoute(
+      path: '/badges',
+      builder: (context, state) => const BadgesScreen(),
+    ),
+    GoRoute(
+      path: '/missions',
+      builder: (context, state) => const MissionsScreen(),
+    ),
+    GoRoute(
       path: '/profile/:userId',
       builder: (context, state) => PublicUserProfileScreen(
         userId: state.pathParameters['userId'] ?? '',
@@ -298,6 +309,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/admin/posts',
       builder: (context, state) => const AdminPostsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/gamification',
+      builder: (context, state) => const AdminGamificationScreen(),
     ),
     GoRoute(
       path: '/admin/reports',

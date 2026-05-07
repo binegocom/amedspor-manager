@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/app_user_model.dart';
@@ -17,8 +18,71 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final userRepository = UserRepository();
-  String searchQuery = '';
+  final List<AppUserModel> _users = [];
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
+  String _searchQuery = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _loadMoreUsers();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+      _loadMoreUsers();
+    }
+  }
+
+  Future<void> _loadMoreUsers({bool reset = false}) async {
+    if (_isLoading || (!_hasMore && !reset)) return;
+
+    setState(() => _isLoading = true);
+    if (reset) {
+      _users.clear();
+      _lastDocument = null;
+      _hasMore = true;
+    }
+
+    try {
+      final snapshot = await userRepository.getUsersSnapshotPaginated(
+        limit: 20,
+        lastDocument: _lastDocument,
+        searchQuery: _searchQuery,
+      );
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final newUsers = snapshot.docs
+          .map((doc) => AppUserModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        _users.addAll(newUsers);
+        _lastDocument = snapshot.docs.last;
+        _isLoading = false;
+        if (newUsers.length < 20) _hasMore = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _updateRole({
     required AppUserModel user,
@@ -27,6 +91,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     try {
       await firestoreService.users.doc(user.id).update({
         'role': role,
+      });
+
+      // Update local state
+      setState(() {
+        final index = _users.indexWhere((u) => u.id == user.id);
+        if (index != -1) {
+          _users[index] = _users[index].copyWith(role: role);
+        }
       });
 
       if (!mounted) return;
@@ -50,13 +122,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _toggleUserDisabled(AppUserModel user) async {
-    final currentValue = await firestoreService.users.doc(user.id).get();
-    final data = currentValue.data();
-    final isDisabled = data?['disabled'] == true;
+    final isDisabled = user.isDisabled;
 
     try {
       await firestoreService.users.doc(user.id).update({
         'disabled': !isDisabled,
+      });
+
+      // Update local state
+      setState(() {
+        final index = _users.indexWhere((u) => u.id == user.id);
+        if (index != -1) {
+          _users[index] = _users[index].copyWith(isDisabled: !isDisabled);
+        }
       });
 
       if (!mounted) return;
@@ -83,18 +161,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
   }
 
-  List<AppUserModel> _filterUsers(List<AppUserModel> users) {
-    final q = searchQuery.trim().toLowerCase();
-
-    if (q.isEmpty) return users;
-
-    return users.where((user) {
-      return user.username.toLowerCase().contains(q) ||
-          user.email.toLowerCase().contains(q) ||
-          user.role.toLowerCase().contains(q);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
@@ -111,11 +177,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               child: TextField(
                 style: const TextStyle(color: Colors.white),
                 cursorColor: const Color(0xFFE53935),
-                onChanged: (value) {
-                  setState(() => searchQuery = value);
+                onSubmitted: (value) {
+                  _searchQuery = value;
+                  _loadMoreUsers(reset: true);
                 },
                 decoration: InputDecoration(
-                  hintText: 'Kullanıcı adı, email veya rol ara...',
+                  hintText: 'Kullanıcı adı ara (Enter ile)...',
                   hintStyle: const TextStyle(color: Color(0xFF777777)),
                   prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF0F6A3D)),
                   filled: true,
@@ -134,40 +201,39 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: StreamBuilder<List<AppUserModel>>(
-              stream: userRepository.watchLeaderboard(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Color(0xFFE53935)));
-                }
+            child: _users.isEmpty && _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFE53935)))
+                : _users.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Kullanıcı bulunamadı.',
+                          style: TextStyle(color: Color(0xFFB3B3B3), fontWeight: FontWeight.w600),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        itemCount: _users.length + (_hasMore ? 1 : 0),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          if (index == _users.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(color: Color(0xFFE53935)),
+                              ),
+                            );
+                          }
 
-                final users = _filterUsers(snapshot.data ?? []);
-
-                if (users.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'Kullanıcı bulunamadı.',
-                      style: TextStyle(color: Color(0xFFB3B3B3), fontWeight: FontWeight.w600),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  itemCount: users.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return _UserCard(
-                      user: user,
-                      onRoleChanged: (role) => _updateRole(user: user, role: role),
-                      onToggleDisabled: () => _toggleUserDisabled(user),
-                      onOpenProfile: () => context.go('/profile/${user.id}'),
-                    );
-                  },
-                );
-              },
-            ),
+                          final user = _users[index];
+                          return _UserCard(
+                            user: user,
+                            onRoleChanged: (role) => _updateRole(user: user, role: role),
+                            onToggleDisabled: () => _toggleUserDisabled(user),
+                            onOpenProfile: () => context.go('/profile/${user.id}'),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
@@ -204,135 +270,142 @@ class _UserCard extends StatelessWidget {
           color: user.isDisabled ? const Color(0xFFE53935) : Colors.white10,
         ),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: const Color(0xFF0F6A3D),
-            backgroundImage:
-                user.avatarUrl.isEmpty ? null : NetworkImage(user.avatarUrl),
-            child: user.avatarUrl.isEmpty
-                ? const Icon(Icons.person_rounded, color: Colors.white)
-                : null,
-          ),
-          const SizedBox(width: 16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 650;
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  username,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  user.email,
-                  style: const TextStyle(
-                    color: Color(0xFFB3B3B3),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
+          final userInfo = Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFF0F6A3D),
+                backgroundImage:
+                    user.avatarUrl.isEmpty ? null : NetworkImage(user.avatarUrl),
+                child: user.avatarUrl.isEmpty
+                    ? const Icon(Icons.person_rounded, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _MiniBadge(
-                      text: '${user.points} puan',
-                      color: const Color(0xFF0F6A3D),
+                    Text(
+                      username,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    _MiniBadge(
-                      text: user.isDisabled ? 'Pasif' : 'Aktif',
-                      color: user.isDisabled
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFF0F6A3D),
+                    const SizedBox(height: 5),
+                    Text(
+                      user.email,
+                      style: const TextStyle(
+                        color: Color(0xFFB3B3B3),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _MiniBadge(
+                          text: '${user.points} puan',
+                          color: const Color(0xFF0F6A3D),
+                        ),
+                        const SizedBox(width: 8),
+                        _MiniBadge(
+                          text: user.isDisabled ? 'Pasif' : 'Aktif',
+                          color: user.isDisabled
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF0F6A3D),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ),
+            ],
+          );
+
+          final actions = Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: compact ? double.infinity : 140,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: user.role,
+                    dropdownColor: const Color(0xFF1A1A1A),
+                    iconEnabledColor: Colors.white,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(value: 'user', child: Text('User', style: TextStyle(color: Colors.white))),
+                      DropdownMenuItem(value: 'moderator', child: Text('Moderator', style: TextStyle(color: Colors.white))),
+                      DropdownMenuItem(value: 'admin', child: Text('Admin', style: TextStyle(color: Colors.white))),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onRoleChanged(value);
+                    },
+                  ),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: onOpenProfile,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF0F6A3D)),
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('Profil'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onToggleDisabled,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: user.isDisabled
+                      ? const Color(0xFF0F6A3D)
+                      : const Color(0xFFE53935),
+                  side: BorderSide(
+                    color: user.isDisabled
+                        ? const Color(0xFF0F6A3D)
+                        : const Color(0xFFE53935),
+                  ),
+                ),
+                icon: Icon(
+                  user.isDisabled
+                      ? Icons.check_circle_rounded
+                      : Icons.block_rounded,
+                  size: 18,
+                ),
+                label: Text(user.isDisabled ? 'Aktifleştir' : 'Pasifleştir'),
+              ),
+            ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                userInfo,
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white10),
+                const SizedBox(height: 12),
+                actions,
               ],
-            ),
-          ),
+            );
+          }
 
-          const SizedBox(width: 12),
-
-          SizedBox(
-            width: 160,
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: user.role,
-                dropdownColor: const Color(0xFF1A1A1A),
-                iconEnabledColor: Colors.white,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'user',
-                    child: Text(
-                      'User',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'moderator',
-                    child: Text(
-                      'Moderator',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'admin',
-                    child: Text(
-                      'Admin',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  onRoleChanged(value);
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          OutlinedButton.icon(
-            onPressed: onOpenProfile,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFF0F6A3D)),
-            ),
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
-            label: const Text('Profil'),
-          ),
-
-          const SizedBox(width: 8),
-
-          OutlinedButton.icon(
-            onPressed: onToggleDisabled,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: user.isDisabled
-                  ? const Color(0xFF0F6A3D)
-                  : const Color(0xFFE53935),
-              side: BorderSide(
-                color: user.isDisabled
-                    ? const Color(0xFF0F6A3D)
-                    : const Color(0xFFE53935),
-              ),
-            ),
-            icon: Icon(
-              user.isDisabled
-                  ? Icons.check_circle_rounded
-                  : Icons.block_rounded,
-              size: 18,
-            ),
-            label: Text(user.isDisabled ? 'Aktifleştir' : 'Pasifleştir'),
-          ),
-        ],
+          return Row(
+            children: [
+              Expanded(child: userInfo),
+              const SizedBox(width: 24),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }

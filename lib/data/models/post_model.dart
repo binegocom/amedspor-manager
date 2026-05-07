@@ -11,6 +11,7 @@ class PostModel {
   final int commentsCount;
   final String lineupId;
   final String? imageUrl;
+  final bool hidden;
   final DateTime createdAt;
 
   const PostModel({
@@ -24,6 +25,7 @@ class PostModel {
     required this.commentsCount,
     required this.lineupId,
     this.imageUrl,
+    this.hidden = false,
     required this.createdAt,
   });
 
@@ -39,6 +41,7 @@ class PostModel {
       commentsCount: map['commentsCount'] ?? 0,
       lineupId: map['lineupId'] ?? '',
       imageUrl: map['imageUrl'] as String?,
+      hidden: map['hidden'] ?? false,
       createdAt: _parseDate(map['createdAt']),
     );
   }
@@ -54,6 +57,7 @@ class PostModel {
       'commentsCount': commentsCount,
       'lineupId': lineupId,
       if (imageUrl != null) 'imageUrl': imageUrl,
+      'hidden': hidden,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -66,5 +70,35 @@ class PostModel {
     } else {
       return DateTime.now();
     }
+  }
+
+  PostModel copyWith({
+    String? id,
+    String? userId,
+    String? username,
+    String? title,
+    String? content,
+    String? category,
+    int? likes,
+    int? commentsCount,
+    String? lineupId,
+    String? imageUrl,
+    bool? hidden,
+    DateTime? createdAt,
+  }) {
+    return PostModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      category: category ?? this.category,
+      likes: likes ?? this.likes,
+      commentsCount: commentsCount ?? this.commentsCount,
+      lineupId: lineupId ?? this.lineupId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      hidden: hidden ?? this.hidden,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 }

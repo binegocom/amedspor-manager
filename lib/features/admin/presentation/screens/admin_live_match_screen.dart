@@ -187,12 +187,17 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
           );
         }
 
-        if (homeScoreContr.text.isEmpty) {
+        // Sadece kullanıcı bir şeyler yazmadıysa veya server verisi değiştiyse güncelle
+        if (homeScoreContr.text != match.homeScore.toString() && !homeScoreContr.selection.isValid) {
           homeScoreContr.text = match.homeScore.toString();
-          awayScoreContr.text = match.awayScore.toString();
-          minuteContr.text = match.minute.toString();
-          selectedStatus = match.status;
         }
+        if (awayScoreContr.text != match.awayScore.toString() && !awayScoreContr.selection.isValid) {
+          awayScoreContr.text = match.awayScore.toString();
+        }
+        if (minuteContr.text != match.minute.toString() && !minuteContr.selection.isValid) {
+          minuteContr.text = match.minute.toString();
+        }
+        selectedStatus = match.status;
 
         return AdminLayout(
           activeRoute: AdminLiveMatchScreen.routePath,
@@ -265,8 +270,9 @@ class _AdminLiveMatchScreenState extends State<AdminLiveMatchScreen> {
                                   ),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null)
+                                  if (val != null) {
                                     setState(() => selectedStatus = val);
+                                  }
                                 },
                               ),
                               const SizedBox(height: 32),
@@ -505,6 +511,15 @@ class _MotmAdminPanelState extends State<_MotmAdminPanel> {
     candidatesContr = TextEditingController(
       text: widget.match.motmCandidates.join(', '),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant _MotmAdminPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.match.motmCandidates.join(', ') !=
+        oldWidget.match.motmCandidates.join(', ')) {
+      candidatesContr.text = widget.match.motmCandidates.join(', ');
+    }
   }
 
   @override

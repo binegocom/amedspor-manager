@@ -86,13 +86,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     );
                   }
 
+                  // Sorting by XP for leaderboard
+                  users.sort((a, b) => b.xp.compareTo(a.xp));
+
                   final topThree = users.take(3).toList();
                   final rest = users.skip(3).toList();
 
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
                     children: [
-                      if (topThree.length == 3)
+                      if (topThree.isNotEmpty)
                         _PodiumCard(
                           users: topThree,
                           rankColor: _rankColor,
@@ -109,7 +112,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       const SizedBox(height: 22),
 
                       const Text(
-                        'Sıralama',
+                        'Tüm Taraftarlar',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -234,6 +237,9 @@ class _PodiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final show2 = users.length > 1;
+    final show3 = users.length > 2;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
       decoration: BoxDecoration(
@@ -249,13 +255,13 @@ class _PodiumCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: _PodiumUser(
+            child: show2 ? _PodiumUser(
               user: users[1],
               rank: 2,
               height: 112,
               color: rankColor(2),
               onTap: () => onUserTap(users[1]),
-            ),
+            ) : const SizedBox(),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -269,13 +275,13 @@ class _PodiumCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: _PodiumUser(
+            child: show3 ? _PodiumUser(
               user: users[2],
               rank: 3,
               height: 96,
               color: rankColor(3),
               onTap: () => onUserTap(users[2]),
-            ),
+            ) : const SizedBox(),
           ),
         ],
       ),
@@ -333,7 +339,7 @@ class _PodiumUser extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${user.points} puan',
+            '${user.xp.toInt()} XP',
             style: const TextStyle(
               color: Color(0xFFB3B3B3),
               fontSize: 11,
@@ -382,8 +388,6 @@ class _LeaderTile extends StatelessWidget {
         ? user.username
         : '@${user.username}';
 
-    final badge = user.badges.isEmpty ? 'Taraftar' : user.badges.first;
-
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -399,15 +403,38 @@ class _LeaderTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color,
-              child: Text(
-                '$rank',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  backgroundColor: color,
+                  child: Text(
+                    '$rank',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-              ),
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'L${user.level}',
+                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -423,7 +450,7 @@ class _LeaderTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    badge,
+                    user.levelTitle,
                     style: const TextStyle(
                       color: Color(0xFFB3B3B3),
                       fontSize: 12,
@@ -433,7 +460,7 @@ class _LeaderTile extends StatelessWidget {
               ),
             ),
             Text(
-              '${user.points}',
+              '${user.xp.toInt()}',
               style: const TextStyle(
                 color: Color(0xFFE53935),
                 fontWeight: FontWeight.w900,
@@ -442,7 +469,7 @@ class _LeaderTile extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             const Text(
-              'puan',
+              'XP',
               style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
             ),
           ],

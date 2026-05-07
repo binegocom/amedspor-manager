@@ -20,9 +20,10 @@ class ReportRepository {
         });
   }
 
-  Stream<List<ReportModel>> watchAllReports() {
+  Stream<List<ReportModel>> watchAllReports({int limit = 50}) {
     return firestoreService.reports
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs

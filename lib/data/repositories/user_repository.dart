@@ -81,4 +81,27 @@ class UserRepository {
               .toList(),
         );
   }
+
+  Future<QuerySnapshot> getUsersSnapshotPaginated({
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+    String? searchQuery,
+  }) async {
+    Query query = firestoreService.users.orderBy('createdAt', descending: true);
+
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      // Simple prefix search for username
+      query = firestoreService.users
+          .where('username', isGreaterThanOrEqualTo: searchQuery)
+          .where('username', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+          .limit(limit);
+    } else {
+      query = query.limit(limit);
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+    }
+
+    return await query.get();
+  }
 }

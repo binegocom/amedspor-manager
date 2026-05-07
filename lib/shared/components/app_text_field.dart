@@ -12,6 +12,8 @@ class AppTextField extends StatelessWidget {
   final IconData? icon;
   final Widget? suffixIcon;
   final int? maxLines;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   const AppTextField({
     super.key,
@@ -24,6 +26,8 @@ class AppTextField extends StatelessWidget {
     this.icon,
     this.suffixIcon,
     this.maxLines = 1,
+    this.onChanged,
+    this.onSubmitted,
   });
 
   @override
@@ -40,6 +44,8 @@ class AppTextField extends StatelessWidget {
           obscureText: isPassword,
           keyboardType: keyboardType,
           maxLines: maxLines,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
           style: AppTextStyles.bodyLarge,
           decoration: InputDecoration(
             hintText: hint,

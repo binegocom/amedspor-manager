@@ -8,7 +8,7 @@ class MaintenanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -18,11 +18,11 @@ class MaintenanceScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.primaryGreen.withValues(alpha: 0.2),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -31,11 +31,11 @@ class MaintenanceScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.handyman_rounded,
                   size: 64,
-                  color: AppColors.primary,
+                  color: AppColors.primaryGreen,
                 ),
               ),
               const SizedBox(height: 48),
-              Text(
+              const Text(
                 'Bakım Modu',
                 style: AppTextStyles.h1,
                 textAlign: TextAlign.center,
@@ -48,7 +48,7 @@ class MaintenanceScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               const CircularProgressIndicator(
-                color: AppColors.primary,
+                color: AppColors.primaryGreen,
                 strokeWidth: 2,
               ),
             ],

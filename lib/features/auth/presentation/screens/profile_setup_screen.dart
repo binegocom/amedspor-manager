@@ -10,7 +10,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
-import '../../../../shared/components/premium_card.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -138,6 +138,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       await userRepository.createOrUpdateUser(appUser);
 
+      // 🔥 Award Profile Completion XP
+      await GamificationService().awardXp(
+        userId: user.uid,
+        amount: GamificationService.xpProfileCompleted,
+        reason: 'Profil tamamlandığı için',
+        eventType: 'profile_completed',
+        sourceType: 'profile',
+        sourceId: user.uid,
+      );
+
       if (!mounted) return;
       context.go('/home');
     } catch (_) {
@@ -180,190 +190,341 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primaryRed.withValues(alpha: 0.05),
+              AppColors.darkBackground,
+              AppColors.primaryGreen.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 32),
+                _buildDigitalFanCard(),
+                const SizedBox(height: 40),
+                _buildAvatarSection(),
+                const SizedBox(height: 40),
+                _buildFormSection(),
+                const SizedBox(height: 40),
+                _buildActionSection(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => context.go('/login'),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Profilini Oluştur',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Dijital tribündeki kimliğini tasarlıyoruz.',
+          style: TextStyle(color: AppColors.muted, fontSize: 16),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDigitalFanCard() {
+    return ValueListenableBuilder(
+      valueListenable: usernameController,
+      builder: (context, value, _) {
+        return Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1A1A1A), Color(0xFF0A0A0A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.gold.withValues(alpha: 0.1),
+                blurRadius: 30,
+                spreadRadius: -10,
+              ),
+            ],
+          ),
+          child: Stack(
             children: [
-              IconButton(
-                onPressed: () => context.go('/login'),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-
-              const SizedBox(height: 24),
-
-              const Text(
-                'Profilini Oluştur',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
+              // Amedspor Watermark
+              Positioned(
+                right: -40,
+                bottom: -40,
+                child: Opacity(
+                  opacity: 0.05,
+                  child: Image.asset('assets/images/app_icon.png', width: 240),
                 ),
               ),
-
-              const SizedBox(height: 8),
-
-              const Text(
-                'Dijital tribünde seni nasıl tanıyalım?',
-                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
-              ),
-
-              const SizedBox(height: 34),
-
-              Center(
-                child: Stack(
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 112,
-                      height: 112,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surface,
-                    border: Border.all(
-                      color: AppColors.primaryRed,
-                      width: 3,
-                    ),
-                  ),
-                  child: selectedAvatar == null
-                      ? const Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 62,
-                        )
-                      : ClipOval(
-                          child: Image.file(
-                            selectedAvatar!,
-                            width: 112,
-                            height: 112,
-                            fit: BoxFit.cover,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'DİJİTAL TARAFTAR KARTI',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
                           ),
                         ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 4,
-                  child: GestureDetector(
-                    onTap: _pickAvatar,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryGreen,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                        Image.asset('assets/images/app_icon.png', width: 32, height: 32),
+                      ],
                     ),
-                  ),
-                ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 34),
-
-              AppTextField(
-                controller: usernameController,
-                label: 'Kullanıcı adı',
-                icon: Icons.alternate_email_rounded,
-              ),
-
-              const SizedBox(height: 14),
-
-              AppTextField(
-                controller: cityController,
-                label: 'Şehir',
-                icon: Icons.location_city_rounded,
-              ),
-
-              const SizedBox(height: 14),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedSupportYear,
-                    dropdownColor: AppColors.surface,
-                    iconEnabledColor: Colors.white,
-                    isExpanded: true,
-                    items: supportYears
-                        .map(
-                          (year) => DropdownMenuItem(
-                            value: year,
-                            child: Text(
-                              'Destek yılı: $year',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                    const Spacer(),
+                    Row(
+                      children: [
+                        _buildCardAvatar(),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                usernameController.text.isEmpty ? 'KULLANICI ADI' : usernameController.text.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                cityController.text.isEmpty ? 'ŞEHİR BELİRTİLMEDİ' : cityController.text.toUpperCase(),
+                                style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => selectedSupportYear = value);
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              PremiumCard(
-                child: Row(
-                  children: const [
-                    CircleAvatar(
-                      backgroundColor: AppColors.primaryGreen,
-                      child: Icon(Icons.shield_rounded, color: Colors.white),
-                    ),
-                    SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        'İlk rozetin hazır: Yeni Taraftar',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.4,
                         ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildCardInfo('ÜYELİK YILI', selectedSupportYear),
+                        _buildCardInfo('SINIF', 'YENİ TARAFTAR'),
+                        _buildCardInfo('DURUM', 'AKTİF'),
+                      ],
                     ),
                   ],
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              AppButton(
-                text: 'PROFİLİ TAMAMLA',
-                isLoading: isCompleting,
-                onTap: _completeSetup,
-              ),
-
-              const SizedBox(height: 12),
-
-              Center(
-                child: TextButton(
-                  onPressed: isCompleting ? null : () => context.go('/home'),
-                  child: const Text(
-                    'Sonra tamamla',
-                    style: TextStyle(color: Color(0xFFB3B3B3)),
-                  ),
                 ),
               ),
             ],
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCardAvatar() {
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primaryGreen, width: 2),
+        boxShadow: [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 10)],
       ),
+      child: ClipOval(
+        child: selectedAvatar != null
+            ? Image.file(selectedAvatar!, fit: BoxFit.cover)
+            : const Icon(Icons.person_rounded, color: Colors.white, size: 32),
+      ),
+    );
+  }
+
+  Widget _buildCardInfo(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 8, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+
+  Widget _buildAvatarSection() {
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _pickAvatar,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryRed.withValues(alpha: 0.5), width: 2),
+                  ),
+                ),
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryRed.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: selectedAvatar == null
+                      ? const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 32)
+                      : ClipOval(child: Image.file(selectedAvatar!, fit: BoxFit.cover)),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(color: AppColors.primaryGreen, shape: BoxShape.circle),
+                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Profil Fotoğrafı Ekle', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormSection() {
+    return Column(
+      children: [
+        AppTextField(
+          controller: usernameController,
+          label: 'Kullanıcı Adı',
+          hint: 'Tribündeki adın...',
+          icon: Icons.alternate_email_rounded,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 20),
+        AppTextField(
+          controller: cityController,
+          label: 'Şehir',
+          hint: 'Nereden destekliyorsun?',
+          icon: Icons.location_on_rounded,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 20),
+        _buildYearSelector(),
+      ],
+    );
+  }
+
+  Widget _buildYearSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          const Icon(Icons.calendar_today_rounded, color: AppColors.primaryGreen, size: 20),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Destek Başlangıcı',
+              style: TextStyle(color: AppColors.muted, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedSupportYear,
+              dropdownColor: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              items: supportYears
+                  .map((y) => DropdownMenuItem(
+                        value: y,
+                        child: Text(y, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                      ))
+                  .toList(),
+              onChanged: (v) => setState(() => selectedSupportYear = v!),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionSection() {
+    return Column(
+      children: [
+        AppButton(
+          text: 'PROFİLİ TAMAMLA',
+          isLoading: isCompleting,
+          onTap: _completeSetup,
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: isCompleting ? null : () => context.go('/home'),
+          child: const Text(
+            'Belki Daha Sonra',
+            style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }

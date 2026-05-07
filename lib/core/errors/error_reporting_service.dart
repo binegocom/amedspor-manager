@@ -38,13 +38,12 @@ class ErrorReportingService {
         'severity': fatal ? 'critical' : 'medium',
       });
     } catch (e) {
-      // Fallback if firestore fails
-      if (kDebugMode) print('Failed to record error to Firestore: $e');
+      if (kDebugMode) print('ErrorReportingService: Failed to record error to Firestore: $e');
     }
   }
 
-  static Future<void> recordFlutterError(FlutterErrorDetails details) async {
-    await recordError(details.exception, details.stack, reason: details.context?.toString(), fatal: true);
+  static void recordFlutterError(FlutterErrorDetails details) {
+    recordError(details.exception, details.stack, reason: details.context?.toString(), fatal: true);
   }
 
   static Future<void> log(String message) async {

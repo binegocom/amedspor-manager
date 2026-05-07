@@ -9,13 +9,39 @@ import '../../../../data/models/match_model.dart';
 import '../../../../data/models/match_event_model.dart';
 import '../../../../data/repositories/match_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../core/gamification/gamification_service.dart';
 
-class LiveMatchCenterScreen extends StatelessWidget {
+class LiveMatchCenterScreen extends StatefulWidget {
   final String matchId;
 
   const LiveMatchCenterScreen({super.key, required this.matchId});
 
   static const String routePath = '/match-live/:matchId';
+
+  @override
+  State<LiveMatchCenterScreen> createState() => _LiveMatchCenterScreenState();
+}
+
+class _LiveMatchCenterScreenState extends State<LiveMatchCenterScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _awardLiveMatchXp();
+  }
+
+  Future<void> _awardLiveMatchXp() async {
+    final user = authService.currentUser;
+    if (user != null) {
+      await GamificationService().awardXp(
+        userId: user.uid,
+        amount: GamificationService.xpLiveMatchOpened,
+        reason: 'Canlı maçı takip ettiğin için',
+        eventType: 'live_match_opened',
+        sourceType: 'match',
+        sourceId: widget.matchId,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +50,7 @@ class LiveMatchCenterScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: StreamBuilder<MatchModel?>(
-        stream: matchRepository.watchMatch(matchId),
+        stream: matchRepository.watchMatch(widget.matchId),
         builder: (context, matchSnapshot) {
           if (matchSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
@@ -41,7 +67,7 @@ class LiveMatchCenterScreen extends StatelessWidget {
                 PremiumHeader(
                   title: 'MAÇ MERKEZİ',
                   actions: [
-                    _ChatAction(matchId: matchId),
+                    _ChatAction(matchId: widget.matchId),
                   ],
                 ),
                 _ScoreCenter(match: match),
@@ -67,7 +93,7 @@ class LiveMatchCenterScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Expanded(
                           child: StreamBuilder<List<MatchEventModel>>(
-                            stream: matchRepository.watchMatchEvents(matchId),
+                            stream: matchRepository.watchMatchEvents(widget.matchId),
                             builder: (context, eventSnapshot) {
                               final events = eventSnapshot.data ?? [];
                               if (events.isEmpty) {

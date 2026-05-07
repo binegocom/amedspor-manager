@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../data/services/reset_service.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../widgets/admin_sidebar.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -26,34 +26,41 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool isLoaded = false;
   bool isSaving = false;
 
-  Future<bool> _isAdmin() async {
-    final user = authService.currentUser;
-    if (user == null) return false;
+  late Future<void> _settingsLoadFuture;
 
-    final doc = await firestoreService.users.doc(user.uid).get();
-    return doc.data()?['role'] == 'admin';
+  @override
+  void initState() {
+    super.initState();
+    _settingsLoadFuture = _loadSettings();
   }
 
   Future<void> _loadSettings() async {
-    if (isLoaded) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('appSettings')
+          .doc('main')
+          .get();
 
-    final doc = await FirebaseFirestore.instance
-        .collection('appSettings')
-        .doc('main')
-        .get();
+      if (doc.exists) {
+        final data = doc.data();
+        appNameController.text = data?['appName'] ?? 'Amedspor Dijital Tribün';
+        announcementController.text = data?['announcement'] ?? '';
+        supportEmailController.text = data?['supportEmail'] ?? '';
 
-    final data = doc.data();
-
-    appNameController.text = data?['appName'] ?? 'Amedspor Dijital Tribün';
-    announcementController.text = data?['announcement'] ?? '';
-    supportEmailController.text = data?['supportEmail'] ?? '';
-
-    maintenanceMode = data?['maintenanceMode'] ?? false;
-    predictionsEnabled = data?['predictionsEnabled'] ?? true;
-    chatEnabled = data?['chatEnabled'] ?? true;
-    feedEnabled = data?['feedEnabled'] ?? true;
-
-    isLoaded = true;
+        setState(() {
+          maintenanceMode = data?['maintenanceMode'] ?? false;
+          predictionsEnabled = data?['predictionsEnabled'] ?? true;
+          chatEnabled = data?['chatEnabled'] ?? true;
+          feedEnabled = data?['feedEnabled'] ?? true;
+          isLoaded = true;
+        });
+      } else {
+        setState(() => isLoaded = true);
+      }
+    } catch (e) {
+      debugPrint('Ayarlar yüklenirken hata: $e');
+      rethrow;
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -98,254 +105,346 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAdmin(),
-      builder: (context, adminSnapshot) {
-        if (adminSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0E0E0E),
-            body: Center(
+    return AdminLayout(
+      activeRoute: AdminSettingsScreen.routePath,
+      title: 'Platform Ayarları',
+      subtitle: 'Uygulama adı, bakım modu, duyuru ve modül erişimlerini yönet.',
+      child: FutureBuilder<void>(
+        future: _settingsLoadFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && !isLoaded) {
+            return const Center(
               child: CircularProgressIndicator(color: Color(0xFFE53935)),
-            ),
-          );
-        }
+            );
+          }
 
-        if (adminSnapshot.data != true) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0E0E0E),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Admin girişi yap'),
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Color(0xFFE53935), size: 48),
+                  const SizedBox(height: 16),
+                  Text('Hata oluştu: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => setState(() => _settingsLoadFuture = _loadSettings()),
+                    child: const Text('TEKRAR DENE'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _AdminCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Genel Bilgiler',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: appNameController,
+                            label: 'Platform adı',
+                            icon: Icons.apps_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: supportEmailController,
+                            label: 'Destek email',
+                            icon: Icons.email_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: announcementController,
+                            label: 'Duyuru mesajı',
+                            icon: Icons.campaign_rounded,
+                            minLines: 4,
+                            maxLines: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _AdminCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Sistem Durumu',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _SwitchTile(
+                            title: 'Bakım modu',
+                            subtitle:
+                                'Açılırsa kullanıcılar uygulamaya erişemeden bakım mesajı görür.',
+                            value: maintenanceMode,
+                            color: const Color(0xFFE53935),
+                            onChanged: (value) {
+                              setState(() => maintenanceMode = value);
+                            },
+                          ),
+                          _SwitchTile(
+                            title: 'Tahmin sistemi aktif',
+                            subtitle:
+                                'Kullanıcıların maç tahmini yapmasına izin ver.',
+                            value: predictionsEnabled,
+                            color: const Color(0xFF0F6A3D),
+                            onChanged: (value) {
+                              setState(() => predictionsEnabled = value);
+                            },
+                          ),
+                          _SwitchTile(
+                            title: 'Sohbet sistemi aktif',
+                            subtitle:
+                                'Sohbet odalarını kullanıcılar için aç/kapat.',
+                            value: chatEnabled,
+                            color: const Color(0xFF0F6A3D),
+                            onChanged: (value) {
+                              setState(() => chatEnabled = value);
+                            },
+                          ),
+                          _SwitchTile(
+                            title: 'Feed aktif',
+                            subtitle:
+                                'Sosyal akış ve post sistemini aç/kapat.',
+                            value: feedEnabled,
+                            color: const Color(0xFF0F6A3D),
+                            onChanged: (value) {
+                              setState(() => feedEnabled = value);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: isSaving ? null : _saveSettings,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53935),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.white12,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        icon: isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.save_rounded),
+                        label: Text(
+                          isSaving ? 'Kaydediliyor...' : 'AYARLARI KAYDET',
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    _AdminCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Tehlikeli İşlemler',
+                            style: TextStyle(
+                              color: Color(0xFFE53935),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildActionTile(
+                            title: 'Kadro Sürümünü Güncelle (2025-26)',
+                            subtitle: 'Eski oyuncuları siler ve 2025-26 rüya kadrosunu yükler.',
+                            icon: Icons.group_add_rounded,
+                            onTap: () => _confirmSquadUpdate(context),
+                            color: const Color(0xFF0F6A3D),
+                          ),
+                          const Divider(color: Colors.white10, height: 24),
+                          _buildActionTile(
+                            title: 'Tüm Verileri Sıfırla',
+                            subtitle: 'Tüm koleksiyonları (Oyuncular, Tahminler vb.) temizler.',
+                            icon: Icons.delete_forever_rounded,
+                            onTap: () => _confirmReset(context),
+                            color: const Color(0xFFE53935),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
-        }
+        },
+      ),
+    );
+  }
 
-        return FutureBuilder<void>(
-          future: _loadSettings(),
-          builder: (context, settingsSnapshot) {
-            if (settingsSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                backgroundColor: Color(0xFF0E0E0E),
-                body: Center(
-                  child: CircularProgressIndicator(color: Color(0xFFE53935)),
-                ),
-              );
-            }
+  Future<void> _confirmSquadUpdate(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Kadroyu Güncelle?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Eski oyuncular silinecek ve yeni Amedspor 2025-2026 kadrosu yüklenecek. Tahminler ve diğer veriler korunacaktır.',
+          style: TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF0F6A3D)),
+            child: const Text('GÜNCELLE'),
+          ),
+        ],
+      ),
+    );
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 900;
+    if (result == true) {
+      if (!context.mounted) return;
+      
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF0F6A3D))),
+      );
 
-                return Scaffold(
-                  backgroundColor: const Color(0xFF0E0E0E),
-                  appBar: compact
-                      ? AppBar(
-                          backgroundColor: const Color(0xFF111111),
-                          foregroundColor: Colors.white,
-                          title: const Text('Platform Ayarları'),
-                        )
-                      : null,
-                  drawer: compact
-                      ? const Drawer(
-                          backgroundColor: Color(0xFF111111),
-                          child: AdminSidebar(
-                            activeRoute: AdminSettingsScreen.routePath,
-                            width: double.infinity,
-                          ),
-                        )
-                      : null,
-                  body: Row(
-                    children: [
-                      if (!compact) const _AdminSidebar(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(28),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 860),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Platform Ayarları',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Uygulama adı, bakım modu, duyuru ve modül erişimlerini yönet.',
-                                    style: TextStyle(
-                                      color: Color(0xFFB3B3B3),
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 28),
+      try {
+        await ResetService().wipePlayersOnly();
+        await seedService.seedAmedspor2026Squad();
+        
+        if (!context.mounted) return;
+        navigator.pop(); // Close loading
+        scaffoldMessenger.showSnackBar(const SnackBar(backgroundColor: Color(0xFF0F6A3D), content: Text('Kadro başarıyla güncellendi!')));
+      } catch (e) {
+        if (!context.mounted) return;
+        navigator.pop(); // Close loading
+        scaffoldMessenger.showSnackBar(SnackBar(backgroundColor: const Color(0xFFE53935), content: Text('Hata: $e')));
+      }
+    }
+  }
 
-                                  _AdminCard(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Genel Bilgiler',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
+  Future<void> _confirmReset(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Sistemi Sıfırla?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Tüm veritabanı silinecek. Bu işlem geri alınamaz! Canlıya geçmeden hemen önce yapılması önerilir.',
+          style: TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE53935)),
+            child: const Text('EVET, HER ŞEYİ SİL'),
+          ),
+        ],
+      ),
+    );
 
-                                        _AdminTextField(
-                                          controller: appNameController,
-                                          label: 'Platform adı',
-                                          icon: Icons.apps_rounded,
-                                        ),
-                                        const SizedBox(height: 16),
+    if (result == true) {
+      if (!context.mounted) return;
+      
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFE53935))),
+      );
 
-                                        _AdminTextField(
-                                          controller: supportEmailController,
-                                          label: 'Destek email',
-                                          icon: Icons.email_rounded,
-                                        ),
-                                        const SizedBox(height: 16),
+      try {
+        await ResetService().wipeAllData();
+        if (!context.mounted) return;
+        navigator.pop(); // Close loading
+        scaffoldMessenger.showSnackBar(const SnackBar(backgroundColor: Color(0xFF0F6A3D), content: Text('Sistem başarıyla sıfırlandı!')));
+      } catch (e) {
+        if (!context.mounted) return;
+        navigator.pop(); // Close loading
+        scaffoldMessenger.showSnackBar(SnackBar(backgroundColor: const Color(0xFFE53935), content: Text('Hata: $e')));
+      }
+    }
+  }
 
-                                        _AdminTextField(
-                                          controller: announcementController,
-                                          label: 'Duyuru mesajı',
-                                          icon: Icons.campaign_rounded,
-                                          minLines: 4,
-                                          maxLines: 6,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 18),
-
-                                  _AdminCard(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Sistem Durumu',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-
-                                        _SwitchTile(
-                                          title: 'Bakım modu',
-                                          subtitle:
-                                              'Açılırsa kullanıcılar uygulamaya erişemeden bakım mesajı görür.',
-                                          value: maintenanceMode,
-                                          color: const Color(0xFFE53935),
-                                          onChanged: (value) {
-                                            setState(
-                                              () => maintenanceMode = value,
-                                            );
-                                          },
-                                        ),
-                                        _SwitchTile(
-                                          title: 'Tahmin sistemi aktif',
-                                          subtitle:
-                                              'Kullanıcıların maç tahmini yapmasına izin ver.',
-                                          value: predictionsEnabled,
-                                          color: const Color(0xFF0F6A3D),
-                                          onChanged: (value) {
-                                            setState(
-                                              () => predictionsEnabled = value,
-                                            );
-                                          },
-                                        ),
-                                        _SwitchTile(
-                                          title: 'Sohbet sistemi aktif',
-                                          subtitle:
-                                              'Sohbet odalarını kullanıcılar için aç/kapat.',
-                                          value: chatEnabled,
-                                          color: const Color(0xFF0F6A3D),
-                                          onChanged: (value) {
-                                            setState(() => chatEnabled = value);
-                                          },
-                                        ),
-                                        _SwitchTile(
-                                          title: 'Feed aktif',
-                                          subtitle:
-                                              'Sosyal akış ve post sistemini aç/kapat.',
-                                          value: feedEnabled,
-                                          color: const Color(0xFF0F6A3D),
-                                          onChanged: (value) {
-                                            setState(() => feedEnabled = value);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 24),
-
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 54,
-                                    child: ElevatedButton.icon(
-                                      onPressed: isSaving
-                                          ? null
-                                          : _saveSettings,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFFE53935,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        disabledBackgroundColor: Colors.white12,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                        ),
-                                      ),
-                                      icon: isSaving
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : const Icon(Icons.save_rounded),
-                                      label: Text(
-                                        isSaving
-                                            ? 'Kaydediliyor...'
-                                            : 'AYARLARI KAYDET',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+  Widget _buildActionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color color = Colors.white,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                   ),
-                );
-              },
-            );
-          },
-        );
-      },
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -497,147 +596,6 @@ class _SwitchTile extends StatelessWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _AdminSidebar extends StatelessWidget {
-  const _AdminSidebar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111111),
-        border: Border(right: BorderSide(color: Colors.white10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AMEDSPOR',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Admin Panel',
-            style: TextStyle(
-              color: Color(0xFFB3B3B3),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _SidebarItem(
-            icon: Icons.dashboard_rounded,
-            title: 'Dashboard',
-            onTap: () => context.go('/admin/dashboard'),
-          ),
-          _SidebarItem(
-            icon: Icons.sports_soccer_rounded,
-            title: 'Maçlar',
-            onTap: () => context.go('/admin/matches'),
-          ),
-          _SidebarItem(
-            icon: Icons.people_rounded,
-            title: 'Kullanıcılar',
-            onTap: () => context.go('/admin/users'),
-          ),
-          _SidebarItem(
-            icon: Icons.article_rounded,
-            title: 'Postlar',
-            onTap: () => context.go('/admin/posts'),
-          ),
-          _SidebarItem(
-            icon: Icons.report_rounded,
-            title: 'Raporlar',
-            onTap: () => context.go('/admin/reports'),
-          ),
-          _SidebarItem(
-            icon: Icons.notifications_rounded,
-            title: 'Bildirim',
-            onTap: () => context.go('/admin/notifications'),
-          ),
-          _SidebarItem(
-            icon: Icons.forum_rounded,
-            title: 'Sohbet',
-            onTap: () => context.go('/admin/chats'),
-          ),
-          _SidebarItem(
-            icon: Icons.emoji_events_rounded,
-            title: 'Tahminler',
-            onTap: () => context.go('/admin/predictions'),
-          ),
-          _SidebarItem(
-            icon: Icons.settings_rounded,
-            title: 'Ayarlar',
-            active: true,
-            onTap: () => context.go('/admin/settings'),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await authService.signOut();
-                if (!context.mounted) return;
-                context.go('/login');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE53935),
-                side: const BorderSide(color: Color(0xFFE53935)),
-              ),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Çıkış'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        tileColor: active ? const Color(0xFF0F6A3D) : Colors.transparent,
-        leading: Icon(
-          icon,
-          color: active ? Colors.white : const Color(0xFFB3B3B3),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFFB3B3B3),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
       ),
     );
   }

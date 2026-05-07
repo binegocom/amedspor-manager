@@ -135,6 +135,26 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     }
   }
 
+  Future<void> _deleteCommentFromAll(String commentId) async {
+    // 1. Delete from posts comments
+    final posts = await firestoreService.posts.get();
+    for (final post in posts.docs) {
+      final commentDoc = await post.reference.collection('comments').doc(commentId).get();
+      if (commentDoc.exists) {
+        await commentDoc.reference.delete();
+      }
+    }
+
+    // 2. Delete from lineups comments
+    final lineups = await firestoreService.lineups.get();
+    for (final lineup in lineups.docs) {
+      final commentDoc = await lineup.reference.collection('comments').doc(commentId).get();
+      if (commentDoc.exists) {
+        await commentDoc.reference.delete();
+      }
+    }
+  }
+
   Color _statusColor(String status) {
     if (status == 'resolved') return const Color(0xFF0F6A3D);
     if (status == 'rejected') return const Color(0xFFE53935);
@@ -195,7 +215,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           const SizedBox(height: 24),
           Expanded(
             child: StreamBuilder<List<ReportModel>>(
-              stream: reportRepository.watchAllReports(),
+              stream: reportRepository.watchAllReports(limit: 50),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(

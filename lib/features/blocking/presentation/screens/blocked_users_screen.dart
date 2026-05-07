@@ -23,18 +23,18 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
     final currentUser = authService.currentUser;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.darkBackground,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Engellenen Kişiler'),
+          const PremiumHeader(title: 'Engellenen Kişiler', showBackButton: true),
           Expanded(
             child: currentUser == null
-                ? const Center(child: Text('Lütfen giriş yapın.'))
+                ? const Center(child: Text('Lütfen giriş yapın.', style: TextStyle(color: Colors.white)))
                 : StreamBuilder<List<String>>(
                     stream: _blockRepository.getBlockedUserIds(currentUser.uid),
                     builder: (context, snapshot) {
-                      if (snapshot.hasError) return Center(child: Text('Hata: ${snapshot.error}'));
-                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      if (snapshot.hasError) return Center(child: Text('Hata: ${snapshot.error}', style: const TextStyle(color: Colors.white)));
+                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
 
                       final blockedIds = snapshot.data!;
 
@@ -43,7 +43,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.person_off_rounded, size: 64, color: AppColors.muted.withOpacity(0.5)),
+                              Icon(Icons.person_off_rounded, size: 64, color: AppColors.muted.withValues(alpha: 0.5)),
                               const SizedBox(height: 16),
                               Text(
                                 'Engellenen kimse yok.',
@@ -67,14 +67,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
                               return ListTile(
                                 leading: CircleAvatar(
-                                  backgroundImage: NetworkImage(user.avatarUrl),
-                                  backgroundColor: AppColors.card,
+                                  backgroundImage: user.avatarUrl.isNotEmpty ? NetworkImage(user.avatarUrl) : null,
+                                  backgroundColor: AppColors.surface,
+                                  child: user.avatarUrl.isEmpty ? const Icon(Icons.person, color: Colors.white) : null,
                                 ),
-                                title: Text(user.username, style: AppTextStyles.h4),
-                                subtitle: Text(user.role, style: AppTextStyles.bodySmall.copyWith(color: AppColors.muted)),
+                                title: Text(user.username, style: AppTextStyles.bodyLarge),
+                                subtitle: Text(user.role, style: AppTextStyles.label.copyWith(color: AppColors.muted)),
                                 trailing: TextButton(
                                   onPressed: () => _blockRepository.unblockUser(currentUser.uid, user.id),
-                                  child: const Text('ENGELİ KALDIR', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                                  child: const Text('ENGELİ KALDIR', style: TextStyle(color: AppColors.primaryRed, fontSize: 12, fontWeight: FontWeight.bold)),
                                 ),
                               );
                             },

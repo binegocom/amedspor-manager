@@ -1,0 +1,74 @@
+extend type GameEvent {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "GameEvent", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `GameEvent`.`organizer`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  organizerId: UUID! @fdc_generated(from: "GameEvent.organizer", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `GameEvent`.`sport`. It must match the value of `Sport`.`id`. See `@ref` for how to customize it.
+  """
+  sportId: UUID! @fdc_generated(from: "GameEvent.sport", purpose: IMPLICIT_REF_FIELD)
+}
+extend type GameParticipant {
+  """
+  ✨ Implicit foreign key field based on `GameParticipant`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID! @fdc_generated(from: "GameParticipant.user", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `GameParticipant`.`gameEvent`. It must match the value of `GameEvent`.`id`. See `@ref` for how to customize it.
+  """
+  gameEventId: UUID! @fdc_generated(from: "GameParticipant.gameEvent", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Post {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Post", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Post`.`associatedSport`. It must match the value of `Sport`.`id`. See `@ref` for how to customize it.
+  """
+  associatedSportId: UUID @fdc_generated(from: "Post.associatedSport", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Post`.`author`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  authorId: UUID! @fdc_generated(from: "Post.author", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Sport {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Sport", purpose: IMPLICIT_KEY_FIELD)
+}
+extend type Team {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Team", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Team`.`captain`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  captainId: UUID! @fdc_generated(from: "Team.captain", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Team`.`sport`. It must match the value of `Sport`.`id`. See `@ref` for how to customize it.
+  """
+  sportId: UUID! @fdc_generated(from: "Team.sport", purpose: IMPLICIT_REF_FIELD)
+}
+extend type TeamMembership {
+  """
+  ✨ Implicit foreign key field based on `TeamMembership`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID! @fdc_generated(from: "TeamMembership.user", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `TeamMembership`.`team`. It must match the value of `Team`.`id`. See `@ref` for how to customize it.
+  """
+  teamId: UUID! @fdc_generated(from: "TeamMembership.team", purpose: IMPLICIT_REF_FIELD)
+}
+extend type User {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "User", purpose: IMPLICIT_KEY_FIELD)
+}

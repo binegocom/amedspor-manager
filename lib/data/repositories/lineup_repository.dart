@@ -18,32 +18,26 @@ class LineupRepository {
     }
   }
 
-  Stream<List<LineupModel>> watchUserLineups(String userId) {
+  Stream<List<LineupModel>> watchUserLineups(String userId, {int limit = 30}) {
     return firestoreService.lineups
         .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-              .toList();
-
-          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return items;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
-  Stream<List<LineupModel>> watchMatchLineups(String matchId) {
+  Stream<List<LineupModel>> watchMatchLineups(String matchId, {int limit = 30}) {
     return firestoreService.lineups
         .where('matchId', isEqualTo: matchId)
+        .orderBy('likes', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-              .toList();
-
-          items.sort((a, b) => b.likes.compareTo(a.likes));
-          return items;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
   Future<LineupModel?> getLineup(String id) async {

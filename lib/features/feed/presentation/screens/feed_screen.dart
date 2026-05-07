@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -198,12 +199,17 @@ class _PostCard extends StatelessWidget {
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                post.imageUrl!,
+              child: CachedNetworkImage(
+                imageUrl: post.imageUrl!,
                 width: double.infinity,
                 height: 160,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                placeholder: (_, __) => Container(
+                  height: 160,
+                  color: AppColors.surface,
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryRed)),
+                ),
+                errorWidget: (_, __, ___) => const SizedBox(),
               ),
             ),
           ],

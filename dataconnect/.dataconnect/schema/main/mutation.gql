@@ -1,0 +1,766 @@
+extend type Mutation {
+  """
+  ✨ Insert a single `GameEvent` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  gameEvent_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: GameEvent_Data!
+  ): GameEvent_KeyOutput! @fdc_generated(from: "GameEvent", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `GameParticipant` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  gameParticipant_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: GameParticipant_Data!
+  ): GameParticipant_KeyOutput! @fdc_generated(from: "GameParticipant", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Post` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  post_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Post_Data!
+  ): Post_KeyOutput! @fdc_generated(from: "Post", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Sport` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  sport_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Sport_Data!
+  ): Sport_KeyOutput! @fdc_generated(from: "Sport", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Team` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  team_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Team_Data!
+  ): Team_KeyOutput! @fdc_generated(from: "Team", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `TeamMembership` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  teamMembership_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: TeamMembership_Data!
+  ): TeamMembership_KeyOutput! @fdc_generated(from: "TeamMembership", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `User` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert `GameEvent` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  gameEvent_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [GameEvent_Data!]!
+  ): [GameEvent_KeyOutput!]! @fdc_generated(from: "GameEvent", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `GameParticipant` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  gameParticipant_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [GameParticipant_Data!]!
+  ): [GameParticipant_KeyOutput!]! @fdc_generated(from: "GameParticipant", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Post` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  post_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Post_Data!]!
+  ): [Post_KeyOutput!]! @fdc_generated(from: "Post", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Sport` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  sport_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Sport_Data!]!
+  ): [Sport_KeyOutput!]! @fdc_generated(from: "Sport", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Team` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  team_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Team_Data!]!
+  ): [Team_KeyOutput!]! @fdc_generated(from: "Team", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `TeamMembership` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  teamMembership_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [TeamMembership_Data!]!
+  ): [TeamMembership_KeyOutput!]! @fdc_generated(from: "TeamMembership", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `User` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert or update a single `GameEvent` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `GameEvent`.
+  """
+  gameEvent_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: GameEvent_Data!
+  ): GameEvent_KeyOutput! @fdc_generated(from: "GameEvent", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `GameParticipant` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `GameParticipant`.
+  """
+  gameParticipant_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: GameParticipant_Data!
+  ): GameParticipant_KeyOutput! @fdc_generated(from: "GameParticipant", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Post` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Post`.
+  """
+  post_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Post_Data!
+  ): Post_KeyOutput! @fdc_generated(from: "Post", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Sport` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Sport`.
+  """
+  sport_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Sport_Data!
+  ): Sport_KeyOutput! @fdc_generated(from: "Sport", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Team` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Team`.
+  """
+  team_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Team_Data!
+  ): Team_KeyOutput! @fdc_generated(from: "Team", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `TeamMembership` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `TeamMembership`.
+  """
+  teamMembership_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: TeamMembership_Data!
+  ): TeamMembership_KeyOutput! @fdc_generated(from: "TeamMembership", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `User` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update `GameEvent` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `GameEvent`.
+  """
+  gameEvent_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [GameEvent_Data!]!
+  ): [GameEvent_KeyOutput!]! @fdc_generated(from: "GameEvent", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `GameParticipant` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `GameParticipant`.
+  """
+  gameParticipant_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [GameParticipant_Data!]!
+  ): [GameParticipant_KeyOutput!]! @fdc_generated(from: "GameParticipant", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Post` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Post`.
+  """
+  post_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Post_Data!]!
+  ): [Post_KeyOutput!]! @fdc_generated(from: "Post", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Sport` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Sport`.
+  """
+  sport_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Sport_Data!]!
+  ): [Sport_KeyOutput!]! @fdc_generated(from: "Sport", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Team` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Team`.
+  """
+  team_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Team_Data!]!
+  ): [Team_KeyOutput!]! @fdc_generated(from: "Team", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `TeamMembership` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `TeamMembership`.
+  """
+  teamMembership_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [TeamMembership_Data!]!
+  ): [TeamMembership_KeyOutput!]! @fdc_generated(from: "TeamMembership", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `User` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Update a single `GameEvent` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `GameEvent` or `null` if not found.
+  """
+  gameEvent_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: GameEvent_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: GameEvent_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: GameEvent_Data!
+  ): GameEvent_KeyOutput @fdc_generated(from: "GameEvent", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `GameParticipant` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `GameParticipant` or `null` if not found.
+  """
+  gameParticipant_update(
+    """
+    The key used to identify the object.
+    """
+    key: GameParticipant_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: GameParticipant_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: GameParticipant_Data!
+  ): GameParticipant_KeyOutput @fdc_generated(from: "GameParticipant", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Post` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Post` or `null` if not found.
+  """
+  post_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Post_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Post_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Post_Data!
+  ): Post_KeyOutput @fdc_generated(from: "Post", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Sport` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Sport` or `null` if not found.
+  """
+  sport_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Sport_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Sport_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Sport_Data!
+  ): Sport_KeyOutput @fdc_generated(from: "Sport", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Team` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Team` or `null` if not found.
+  """
+  team_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Team_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Team_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Team_Data!
+  ): Team_KeyOutput @fdc_generated(from: "Team", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `TeamMembership` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `TeamMembership` or `null` if not found.
+  """
+  teamMembership_update(
+    """
+    The key used to identify the object.
+    """
+    key: TeamMembership_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: TeamMembership_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: TeamMembership_Data!
+  ): TeamMembership_KeyOutput @fdc_generated(from: "TeamMembership", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `User` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `User` or `null` if not found.
+  """
+  user_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: User_Data!
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update `GameEvent` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  gameEvent_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: GameEvent_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: GameEvent_Data!
+  ): Int! @fdc_generated(from: "GameEvent", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `GameParticipant` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  gameParticipant_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: GameParticipant_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: GameParticipant_Data!
+  ): Int! @fdc_generated(from: "GameParticipant", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Post` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  post_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Post_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Post_Data!
+  ): Int! @fdc_generated(from: "Post", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Sport` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  sport_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Sport_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Sport_Data!
+  ): Int! @fdc_generated(from: "Sport", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Team` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  team_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Team_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Team_Data!
+  ): Int! @fdc_generated(from: "Team", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `TeamMembership` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  teamMembership_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: TeamMembership_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: TeamMembership_Data!
+  ): Int! @fdc_generated(from: "TeamMembership", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `User` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  user_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: User_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: User_Data!
+  ): Int! @fdc_generated(from: "User", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Delete a single `GameEvent` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  gameEvent_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: GameEvent_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: GameEvent_FirstRow
+  ): GameEvent_KeyOutput @fdc_generated(from: "GameEvent", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `GameParticipant` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  gameParticipant_delete(
+    """
+    The key used to identify the object.
+    """
+    key: GameParticipant_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: GameParticipant_FirstRow
+  ): GameParticipant_KeyOutput @fdc_generated(from: "GameParticipant", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Post` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  post_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Post_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Post_FirstRow
+  ): Post_KeyOutput @fdc_generated(from: "Post", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Sport` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  sport_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Sport_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Sport_FirstRow
+  ): Sport_KeyOutput @fdc_generated(from: "Sport", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Team` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  team_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Team_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Team_FirstRow
+  ): Team_KeyOutput @fdc_generated(from: "Team", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `TeamMembership` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  teamMembership_delete(
+    """
+    The key used to identify the object.
+    """
+    key: TeamMembership_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: TeamMembership_FirstRow
+  ): TeamMembership_KeyOutput @fdc_generated(from: "TeamMembership", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `User` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  user_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete `GameEvent` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  gameEvent_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: GameEvent_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "GameEvent", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `GameParticipant` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  gameParticipant_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: GameParticipant_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "GameParticipant", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Post` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  post_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Post_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Post", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Sport` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  sport_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Sport_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Sport", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Team` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  team_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Team_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Team", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `TeamMembership` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  teamMembership_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: TeamMembership_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "TeamMembership", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `User` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  user_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: User_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "User", purpose: DELETE_MULTIPLE)
+}

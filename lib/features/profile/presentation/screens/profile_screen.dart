@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/components/premium_card.dart';
@@ -229,11 +230,12 @@ class _ProfileHero extends StatelessWidget {
                         size: 52,
                       )
                     : ClipOval(
-                        child: Image.network(
-                          avatarUrl,
+                        child: CachedNetworkImage(
+                          imageUrl: avatarUrl,
                           width: 92,
                           height: 92,
                           fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Icon(Icons.person_rounded, color: Colors.white, size: 52),
                         ),
                       ),
               ),

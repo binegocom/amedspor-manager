@@ -5,6 +5,7 @@ const {
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
+const {getAuth} = require("firebase-admin/auth");
 
 initializeApp();
 
@@ -44,24 +45,35 @@ async function sendPushToUser({
 }) {
   if (!userId) return;
 
-  const userDoc = await db.collection("users").doc(userId).get();
+  try {
+    const userDoc = await db.collection("users").doc(userId).get();
 
-  if (!userDoc.exists) return;
+    if (!userDoc.exists) return;
 
-  const fcmToken = userDoc.data().fcmToken;
+    const fcmToken = userDoc.data().fcmToken;
 
-  if (!fcmToken) return;
+    if (!fcmToken) return;
 
-  await getMessaging().send({
-    token: fcmToken,
-    notification: {
-      title,
-      body,
-    },
-    data: {
-      route: route || "/notifications",
-    },
-  });
+    await getMessaging().send({
+      token: fcmToken,
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        route: route || "/notifications",
+      },
+    });
+  } catch (error) {
+    // Clean up stale FCM tokens to prevent future failures
+    if (error.code === "messaging/registration-token-not-registered" ||
+        error.code === "messaging/invalid-registration-token") {
+      await db.collection("users").doc(userId).update({fcmToken: null});
+      console.log(`Cleaned stale FCM token for user ${userId}`);
+    } else {
+      console.error(`Push failed for ${userId}:`, error);
+    }
+  }
 }
 
 exports.onCommentCreated = onDocumentCreated(
@@ -191,5 +203,38 @@ exports.onPredictionUpdated = onDocumentUpdated(
         body: message,
         route: targetRoute,
       });
+    },
+);
+
+/**
+ * Kullanıcının rolü değiştiğinde Firebase Custom Claims'i günceller.
+ * Bu sayede Firestore Rules'ta get() yerine request.auth.token.role kullanılabilir.
+ * Her get() çağrısı 1 okuma maliyeti = her write işleminde tasarruf.
+ */
+exports.onUserRoleChanged = onDocumentUpdated(
+    "users/{userId}",
+    async (event) => {
+      const before = event.data.before.data();
+      const after = event.data.after.data();
+
+      // Only process if role actually changed
+      if (before.role === after.role) return;
+
+      const validRoles = ["admin", "moderator", "user"];
+      const newRole = after.role;
+
+      if (!validRoles.includes(newRole)) {
+        console.error(`Invalid role "${newRole}" for user ${event.params.userId}`);
+        return;
+      }
+
+      try {
+        await getAuth().setCustomUserClaims(event.params.userId, {
+          role: newRole,
+        });
+        console.log(`Set custom claim role=${newRole} for ${event.params.userId}`);
+      } catch (error) {
+        console.error(`Failed to set custom claims for ${event.params.userId}:`, error);
+      }
     },
 );

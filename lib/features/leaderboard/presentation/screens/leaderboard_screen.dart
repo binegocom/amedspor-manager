@@ -86,8 +86,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     );
                   }
 
-                  // Sorting by XP for leaderboard
-                  users.sort((a, b) => b.xp.compareTo(a.xp));
+                  // Firestore already returns sorted by points via watchLeaderboard()
 
                   final topThree = users.take(3).toList();
                   final rest = users.skip(3).toList();

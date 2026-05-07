@@ -6,18 +6,15 @@ class ReportRepository {
     await firestoreService.reports.doc(report.id).set(report.toMap());
   }
 
-  Stream<List<ReportModel>> watchUserReports(String userId) {
+  Stream<List<ReportModel>> watchUserReports(String userId, {int limit = 30}) {
     return firestoreService.reports
         .where('reporterId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => ReportModel.fromMap(doc.id, doc.data()))
-              .toList();
-
-          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return items;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ReportModel.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
   Stream<List<ReportModel>> watchAllReports({int limit = 50}) {

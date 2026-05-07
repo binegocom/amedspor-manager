@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -107,7 +108,7 @@ class _AdminMatchCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: match.homeLogo.isNotEmpty
-                ? Image.network(match.homeLogo, fit: BoxFit.contain)
+                ? CachedNetworkImage(imageUrl: match.homeLogo, fit: BoxFit.contain, errorWidget: (_, __, ___) => Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28))
                 : Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28),
           ),
           const SizedBox(width: 20),

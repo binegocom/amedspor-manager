@@ -59,18 +59,15 @@ class PostRepository {
     return await query.get();
   }
 
-  Stream<List<PostModel>> watchUserPosts(String userId) {
+  Stream<List<PostModel>> watchUserPosts(String userId, {int limit = 30}) {
     return firestoreService.posts
         .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => PostModel.fromMap(doc.id, doc.data()))
-              .toList();
-
-          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return items;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PostModel.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
   Future<PostModel?> getPost(String postId) async {

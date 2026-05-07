@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
@@ -211,11 +212,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   const SizedBox(height: 16),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(16),
-                                    child: Image.network(
-                                      post.imageUrl!,
+                                    child: CachedNetworkImage(
+                                      imageUrl: post.imageUrl!,
                                       width: double.infinity,
                                       fit: BoxFit.fitWidth,
-                                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                      placeholder: (_, __) => Container(
+                                        height: 160,
+                                        color: AppColors.surface,
+                                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryRed)),
+                                      ),
+                                      errorWidget: (_, __, ___) => const SizedBox(),
                                     ),
                                   ),
                                 ],

@@ -11,24 +11,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    // Custom Claims-based role checks (no get() = no extra reads = lower cost)
     function isAdmin() {
-      return signedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return signedIn() && request.auth.token.role == 'admin';
     }
 
-    function isModerator() {
-      return signedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator';
-    }
 
     function isStaff() {
-      return signedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
+      return signedIn() && request.auth.token.role in ['admin', 'moderator'];
     }
 
-    function validUserRole() {
-      return request.resource.data.role in ['admin', 'moderator', 'user'];
-    }
 
     match /users/{userId} {
       allow read: if true;
@@ -36,9 +28,13 @@ service cloud.firestore {
       allow create: if isOwner(userId)
         && request.resource.data.role == 'user';
 
+      // Users cannot modify their own role, points, badges, or xp
       allow update: if (
         isOwner(userId)
         && request.resource.data.role == resource.data.role
+        && request.resource.data.points == resource.data.points
+        && request.resource.data.badges == resource.data.badges
+        && request.resource.data.xp == resource.data.xp
       ) || isStaff();
 
       allow delete: if isAdmin();
@@ -190,7 +186,10 @@ service cloud.firestore {
     match /questions/{questionId} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      allow update: if signedIn();
+      // Users can only update answers/respondents (voting), not the question itself
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['answers', 'respondents']);
     }
   }
 }

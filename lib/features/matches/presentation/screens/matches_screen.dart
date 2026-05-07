@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -120,7 +121,7 @@ class _TeamMini extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
           child: logo.isNotEmpty 
-            ? Image.network(logo, fit: BoxFit.contain)
+            ? CachedNetworkImage(imageUrl: logo, fit: BoxFit.contain, errorWidget: (_, __, ___) => const Icon(Icons.shield, color: AppColors.muted, size: 24))
             : const Icon(Icons.shield, color: AppColors.muted, size: 24),
         ),
         const SizedBox(height: 8),

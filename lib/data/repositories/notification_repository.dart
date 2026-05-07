@@ -4,18 +4,15 @@ import '../models/notification_model.dart';
 import '../services/firebase/firebase_providers.dart';
 
 class NotificationRepository {
-  Stream<List<NotificationModel>> watchUserNotifications(String userId) {
+  Stream<List<NotificationModel>> watchUserNotifications(String userId, {int limit = 50}) {
     return firestoreService.notifications
         .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final items = snapshot.docs
-              .map((doc) => NotificationModel.fromMap(doc.id, doc.data()))
-              .toList();
-
-          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return items;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => NotificationModel.fromMap(doc.id, doc.data()))
+            .toList());
   }
 
   Future<void> createNotification(NotificationModel notification) async {

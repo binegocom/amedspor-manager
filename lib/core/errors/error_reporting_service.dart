@@ -7,19 +7,36 @@ import '../../data/services/firebase/firebase_providers.dart';
 class ErrorReportingService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Throttle Firestore writes to prevent cost bombs during cascading failures
+  static int _writeCount = 0;
+  static DateTime _windowStart = DateTime.now();
+  static const int _maxWritesPerMinute = 10;
+
   static Future<void> recordError(dynamic error, StackTrace? stack, {String? reason, bool fatal = false}) async {
     if (kDebugMode) {
       print('Reporting Error: $error');
       if (stack != null) print(stack);
     }
 
-    // 1. Record to Crashlytics (if not Web)
+    // 1. Record to Crashlytics (if not Web) — always, no throttle
     if (!kIsWeb) {
       await FirebaseCrashlytics.instance.recordError(error, stack, reason: reason, fatal: fatal);
     }
 
-    // 2. Record to Firestore errorReports collection
+    // 2. Record to Firestore errorReports collection — throttled
     try {
+      // Throttle: max 10 writes per minute to prevent cost explosion
+      final now = DateTime.now();
+      if (now.difference(_windowStart).inSeconds > 60) {
+        _writeCount = 0;
+        _windowStart = now;
+      }
+      if (_writeCount >= _maxWritesPerMinute) {
+        if (kDebugMode) print('ErrorReportingService: Throttled — skipping Firestore write');
+        return;
+      }
+      _writeCount++;
+
       final user = authService.currentUser;
       final packageInfo = await PackageInfo.fromPlatform();
       

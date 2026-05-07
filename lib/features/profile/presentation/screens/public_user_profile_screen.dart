@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/app_user_model.dart';
@@ -268,11 +269,12 @@ class _ProfileHero extends StatelessWidget {
                     size: 54,
                   )
                 : ClipOval(
-                    child: Image.network(
-                      user.avatarUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: user.avatarUrl,
                       width: 94,
                       height: 94,
                       fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const Icon(Icons.person_rounded, color: Colors.white, size: 54),
                     ),
                   ),
           ),

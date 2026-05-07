@@ -135,39 +135,28 @@ exports.onMatchCreated = onDocumentCreated(
       const match = event.data.data();
       const matchId = event.params.matchId;
 
-      const usersSnapshot = await db.collection("users").get();
+      const title = "Yeni maç eklendi";
+      const body = `${match.homeTeam} vs ${match.awayTeam} maçı eklendi.`;
+      const route = `/prediction/${matchId}`;
 
-      const batches = [];
-      let batch = db.batch();
-      let count = 0;
-
-      usersSnapshot.docs.forEach((userDoc) => {
-        const ref = db.collection("notifications").doc();
-
-        batch.set(ref, {
-          userId: userDoc.id,
-          title: "Yeni maç eklendi",
-          message: `${match.homeTeam} vs ${match.awayTeam} maçı eklendi.`,
-          type: "match",
-          targetRoute: `/prediction/${matchId}`,
-          read: false,
-          createdAt: FieldValue.serverTimestamp(),
+      // Global topic 'all_users' üzerinden tek bir push bildirimi gönderiyoruz
+      // Böylece yüz binlerce kullanıcı için Firestore doküman okuma/yazma 
+      // (ve devasa fatura riski) ortadan kalkmış olur.
+      try {
+        await getMessaging().send({
+          topic: "all_users",
+          notification: {
+            title,
+            body,
+          },
+          data: {
+            route,
+          },
         });
-
-        count++;
-        // Firestore batch limiti 500'dür, güvenli sınır olarak 499'da bölüyoruz.
-        if (count === 499) {
-          batches.push(batch.commit());
-          batch = db.batch();
-          count = 0;
-        }
-      });
-
-      if (count > 0) {
-        batches.push(batch.commit());
+        console.log(`Successfully sent match notification for ${matchId}`);
+      } catch (error) {
+        console.error("Error sending match notification:", error);
       }
-
-      await Promise.all(batches);
     },
 );
 

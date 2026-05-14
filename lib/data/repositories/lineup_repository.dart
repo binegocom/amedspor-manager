@@ -24,20 +24,27 @@ class LineupRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
-  Stream<List<LineupModel>> watchMatchLineups(String matchId, {int limit = 30}) {
+  Stream<List<LineupModel>> watchMatchLineups(
+    String matchId, {
+    int limit = 30,
+  }) {
     return firestoreService.lineups
         .where('matchId', isEqualTo: matchId)
         .orderBy('likes', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LineupModel.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Future<LineupModel?> getLineup(String id) async {
@@ -71,19 +78,12 @@ class LineupRepository {
       });
 
       // Increment likes
-      transaction.update(lineupRef, {
-        'likes': FieldValue.increment(1),
-      });
+      transaction.update(lineupRef, {'likes': FieldValue.increment(1)});
 
-      // Grant Badge & Notification: Popüler Teknik Direktör (at 10 likes)
+      // Cross-user profile rewards must be handled by trusted backend code.
+      // The client still records the like and creates the owner notification.
       if (currentLikes + 1 == 10 && ownerId.isNotEmpty) {
-        final userRef = firestoreService.users.doc(ownerId);
         final notificationRef = firestoreService.notifications.doc();
-
-        transaction.update(userRef, {
-          'points': FieldValue.increment(25),
-          'badges': FieldValue.arrayUnion(['Popüler Teknik Direktör']),
-        });
 
         transaction.set(notificationRef, {
           'userId': ownerId,
@@ -138,7 +138,9 @@ class LineupRepository {
     required CommentModel comment,
   }) async {
     final lineupRef = firestoreService.lineups.doc(lineupId);
-    final commentRef = firestoreService.lineupComments(lineupId).doc(comment.id);
+    final commentRef = firestoreService
+        .lineupComments(lineupId)
+        .doc(comment.id);
 
     await FirebaseFirestore.instance.runTransaction((transaction) async {
       transaction.set(commentRef, comment.toMap());
@@ -163,7 +165,9 @@ class LineupRepository {
     required CommentModel comment,
   }) async {
     final lineupRef = firestoreService.lineups.doc(lineupId);
-    final commentRef = firestoreService.lineupComments(lineupId).doc(comment.id);
+    final commentRef = firestoreService
+        .lineupComments(lineupId)
+        .doc(comment.id);
 
     await FirebaseFirestore.instance.runTransaction((transaction) async {
       transaction.set(commentRef, comment.toMap());

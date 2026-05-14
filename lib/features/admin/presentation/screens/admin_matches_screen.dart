@@ -15,23 +15,49 @@ class AdminMatchesScreen extends StatelessWidget {
 
   static const String routePath = '/admin/matches';
 
-  Future<void> _deleteMatch(BuildContext context, MatchRepository repository, MatchModel match) async {
+  Future<void> _deleteMatch(
+    BuildContext context,
+    MatchRepository repository,
+    MatchModel match,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Maç Silinsin mi?', style: TextStyle(color: Colors.white)),
-        content: Text('${match.homeTeam} vs ${match.awayTeam} maçı silinecek.', style: const TextStyle(color: AppColors.muted)),
+        title: const Text(
+          'Maç Silinsin mi?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '${match.homeTeam} vs ${match.awayTeam} maçı silinecek.',
+          style: const TextStyle(color: AppColors.muted),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İPTAL')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('SİL', style: TextStyle(color: AppColors.primaryRed))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İPTAL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'SİL',
+              style: TextStyle(color: AppColors.primaryRed),
+            ),
+          ),
         ],
       ),
     );
 
     if (confirm == true) {
       await repository.deleteMatch(match.id);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: AppColors.primaryGreen, content: Text('Maç silindi.')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.primaryGreen,
+            content: Text('Maç silindi.'),
+          ),
+        );
+      }
     }
   }
 
@@ -59,10 +85,19 @@ class AdminMatchesScreen extends StatelessWidget {
             stream: matchRepository.watchMatches(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryRed),
+                );
               }
               final matches = snapshot.data ?? [];
-              if (matches.isEmpty) return const Center(child: Text('Henüz maç eklenmedi.', style: TextStyle(color: AppColors.muted)));
+              if (matches.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Henüz maç eklenmedi.',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                );
+              }
 
               return ListView.separated(
                 shrinkWrap: true,
@@ -71,9 +106,12 @@ class AdminMatchesScreen extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 16),
                 itemBuilder: (context, index) => _AdminMatchCard(
                   match: matches[index],
-                  onEdit: () => context.go('/admin/matches/edit/${matches[index].id}'),
-                  onLive: () => context.go('/admin/matches/live/${matches[index].id}'),
-                  onDelete: () => _deleteMatch(context, matchRepository, matches[index]),
+                  onEdit: () =>
+                      context.go('/admin/matches/edit/${matches[index].id}'),
+                  onLive: () =>
+                      context.go('/admin/matches/live/${matches[index].id}'),
+                  onDelete: () =>
+                      _deleteMatch(context, matchRepository, matches[index]),
                 ),
               );
             },
@@ -90,7 +128,12 @@ class _AdminMatchCard extends StatelessWidget {
   final VoidCallback onLive;
   final VoidCallback onDelete;
 
-  const _AdminMatchCard({required this.match, required this.onEdit, required this.onLive, required this.onDelete});
+  const _AdminMatchCard({
+    required this.match,
+    required this.onEdit,
+    required this.onLive,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -104,19 +147,36 @@ class _AdminMatchCard extends StatelessWidget {
             height: 52,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isLive ? AppColors.primaryRed.withValues(alpha: 0.1) : AppColors.surface,
+              color: isLive
+                  ? AppColors.primaryRed.withValues(alpha: 0.1)
+                  : AppColors.surface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: match.homeLogo.isNotEmpty
-                ? CachedNetworkImage(imageUrl: match.homeLogo, fit: BoxFit.contain, errorWidget: (_, __, ___) => Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28))
-                : Icon(Icons.sports_soccer_rounded, color: isLive ? AppColors.primaryRed : AppColors.muted, size: 28),
+                ? CachedNetworkImage(
+                    imageUrl: match.homeLogo,
+                    fit: BoxFit.contain,
+                    errorWidget: (_, _, _) => Icon(
+                      Icons.sports_soccer_rounded,
+                      color: isLive ? AppColors.primaryRed : AppColors.muted,
+                      size: 28,
+                    ),
+                  )
+                : Icon(
+                    Icons.sports_soccer_rounded,
+                    color: isLive ? AppColors.primaryRed : AppColors.muted,
+                    size: 28,
+                  ),
           ),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${match.homeTeam} vs ${match.awayTeam}', style: AppTextStyles.h3),
+                Text(
+                  '${match.homeTeam} vs ${match.awayTeam}',
+                  style: AppTextStyles.h3,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '${match.matchDate.day}.${match.matchDate.month} ${match.matchDate.hour}:${match.matchDate.minute.toString().padLeft(2, '0')}',
@@ -130,9 +190,27 @@ class _AdminMatchCard extends StatelessWidget {
             spacing: 4,
             runSpacing: 4,
             children: [
-              IconButton(onPressed: onLive, icon: const Icon(Icons.live_tv_rounded, color: AppColors.primaryGreen), tooltip: 'Canlı Kontrol'),
-              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_rounded, color: AppColors.gold), tooltip: 'Düzenle'),
-              IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_rounded, color: AppColors.errorRed), tooltip: 'Sil'),
+              IconButton(
+                onPressed: onLive,
+                icon: const Icon(
+                  Icons.live_tv_rounded,
+                  color: AppColors.primaryGreen,
+                ),
+                tooltip: 'Canlı Kontrol',
+              ),
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_rounded, color: AppColors.gold),
+                tooltip: 'Düzenle',
+              ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_rounded,
+                  color: AppColors.errorRed,
+                ),
+                tooltip: 'Sil',
+              ),
             ],
           ),
         ],

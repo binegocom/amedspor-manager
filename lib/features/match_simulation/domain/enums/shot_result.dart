@@ -1,0 +1,1 @@
+enum ShotResult { goal, saved, post }

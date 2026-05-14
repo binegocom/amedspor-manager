@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 import '../../../../data/models/prediction_model.dart';
 import '../../../../data/repositories/prediction_repository.dart';
@@ -32,7 +33,7 @@ class MyPredictionsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/profile')),
+            _Header(onBack: () => context.popOrGo('/profile')),
 
             StreamBuilder<List<PredictionModel>>(
               stream: predictionRepository.watchUserPredictions(user.uid),
@@ -86,7 +87,7 @@ class MyPredictionsScreen extends StatelessWidget {
                       return _PredictionCard(
                         prediction: prediction,
                         onTap: () =>
-                            context.go('/prediction/${prediction.matchId}'),
+                            context.push('/prediction/${prediction.matchId}'),
                       );
                     },
                   );

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/router/navigation_helpers.dart';
 import '../../../../data/models/comment_model.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
@@ -11,7 +12,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/login_required_modal.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String postId;
@@ -31,24 +32,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final postRepository = PostRepository();
   final uuid = const Uuid();
 
-  bool liked = false;
-
   bool get isLoggedIn => authService.currentUser != null;
 
   Future<void> _toggleLike(PostModel post) async {
-    if (!isLoggedIn) {
+    final user = authService.currentUser;
+    if (user == null) {
       showLoginRequiredModal(context);
       return;
     }
 
-    final nextLiked = !liked;
-    setState(() => liked = nextLiked);
-
     try {
-      await postRepository.toggleLike(postId: widget.postId, liked: nextLiked);
+      await postRepository.toggleLike(postId: widget.postId, userId: user.uid);
     } catch (_) {
       if (!mounted) return;
-      setState(() => liked = !nextLiked);
       _showError('Begeni kaydedilemedi. Lutfen tekrar dene.');
     }
   }
@@ -75,7 +71,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     try {
       await postRepository.addComment(postId: widget.postId, comment: comment);
-      
+
       // 🔥 Award XP for commenting
       await GamificationService().awardXp(
         userId: user.uid,
@@ -104,15 +100,41 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.errorRed,
-        content: Text(message),
-      ),
+      SnackBar(backgroundColor: AppColors.errorRed, content: Text(message)),
     );
   }
 
   void _reportPost() {
-    context.go('/report/post/${widget.postId}');
+    context.push('/report/post/${widget.postId}');
+  }
+
+  void _showFullScreenImage(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.8,
+            maxScale: 4.0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (_, _) => const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryRed),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -129,16 +151,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/feed'), onReport: _reportPost),
+            _Header(
+              onBack: () => context.popOrGo('/feed'),
+              onReport: _reportPost,
+            ),
 
             Expanded(
-              child: FutureBuilder<PostModel?>(
-                future: postRepository.getPost(widget.postId),
+              child: StreamBuilder<PostModel?>(
+                stream: postRepository.watchPost(widget.postId),
                 builder: (context, postSnapshot) {
                   if (postSnapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(
                         color: AppColors.primaryRed,
+                      ),
+                    );
+                  }
+
+                  if (postSnapshot.hasError) {
+                    return const Center(
+                      child: Text(
+                        'Post yüklenemedi.',
+                        style: TextStyle(color: AppColors.muted),
                       ),
                     );
                   }
@@ -158,6 +192,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     stream: postRepository.watchComments(widget.postId),
                     builder: (context, commentsSnapshot) {
                       final comments = commentsSnapshot.data ?? [];
+                      final userId = authService.currentUser?.uid;
 
                       return ListView(
                         padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
@@ -195,10 +230,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 18),
-                                Text(
-                                  post.title,
-                                  style: AppTextStyles.h2,
-                                ),
+                                Text(post.title, style: AppTextStyles.h2),
                                 const SizedBox(height: 10),
                                 Text(
                                   post.content,
@@ -210,32 +242,61 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ),
                                 if (post.imageUrl != null) ...[
                                   const SizedBox(height: 16),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: CachedNetworkImage(
-                                      imageUrl: post.imageUrl!,
-                                      width: double.infinity,
-                                      fit: BoxFit.fitWidth,
-                                      placeholder: (_, __) => Container(
-                                        height: 160,
-                                        color: AppColors.surface,
-                                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryRed)),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        _showFullScreenImage(post.imageUrl!),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: CachedNetworkImage(
+                                        imageUrl: post.imageUrl!,
+                                        width: double.infinity,
+                                        fit: BoxFit.fitWidth,
+                                        placeholder: (_, _) => Container(
+                                          height: 160,
+                                          color: AppColors.surface,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primaryRed,
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (_, _, _) =>
+                                            const SizedBox(),
                                       ),
-                                      errorWidget: (_, __, ___) => const SizedBox(),
                                     ),
                                   ),
                                 ],
                                 const SizedBox(height: 18),
                                 Row(
                                   children: [
-                                    _ActionButton(
-                                      icon: liked
-                                          ? Icons.thumb_up_alt
-                                          : Icons.thumb_up_alt_outlined,
-                                      label: '${post.likes}',
-                                      active: liked,
-                                      onTap: () => _toggleLike(post),
-                                    ),
+                                    if (userId == null)
+                                      _ActionButton(
+                                        icon: Icons.thumb_up_alt_outlined,
+                                        label: '${post.likes}',
+                                        active: false,
+                                        onTap: () => _toggleLike(post),
+                                      )
+                                    else
+                                      StreamBuilder<bool>(
+                                        stream: postRepository
+                                            .watchLikedByCurrentUser(
+                                              postId: widget.postId,
+                                              userId: userId,
+                                            ),
+                                        builder: (context, likedSnapshot) {
+                                          final liked =
+                                              likedSnapshot.data ?? false;
+                                          return _ActionButton(
+                                            icon: liked
+                                                ? Icons.thumb_up_alt
+                                                : Icons.thumb_up_alt_outlined,
+                                            label: '${post.likes}',
+                                            active: liked,
+                                            onTap: () => _toggleLike(post),
+                                          );
+                                        },
+                                      ),
                                     const SizedBox(width: 14),
                                     _ActionButton(
                                       icon: Icons.chat_bubble_outline_rounded,

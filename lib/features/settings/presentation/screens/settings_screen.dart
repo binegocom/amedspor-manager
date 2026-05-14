@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../main.dart';
-import '../../../../data/services/firebase/firebase_providers.dart';
+
+import '../../../../core/router/navigation_helpers.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../main.dart';
 import '../../../../shared/components/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,11 +18,25 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool matchNotifications = true;
-  bool chatNotifications = true;
-  bool likeNotifications = true;
+  final Map<String, bool> notificationPrefs = Map<String, bool>.from(
+    _defaultNotificationPrefs,
+  );
+
   bool darkMode = true;
   bool isLoading = true;
+  bool isSavingPrefs = false;
+
+  static const Map<String, bool> _defaultNotificationPrefs = {
+    'match': true,
+    'matchStart': true,
+    'goal': true,
+    'lineup': true,
+    'prediction': true,
+    'chat': true,
+    'comment': true,
+    'like': true,
+    'mission': true,
+  };
 
   @override
   void initState() {
@@ -29,38 +46,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     setState(() => isLoading = true);
+
     final user = authService.currentUser;
     final themeMode = await appStateService.isDarkMode();
-    
+
     if (user != null) {
       final userData = await userRepository.getUser(user.uid);
       if (userData != null) {
-        setState(() {
-          matchNotifications = userData.notificationPrefs['match'] ?? true;
-          chatNotifications = userData.notificationPrefs['chat'] ?? true;
-          likeNotifications = userData.notificationPrefs['like'] ?? true;
-          darkMode = themeMode;
-          isLoading = false;
-        });
-        return;
+        notificationPrefs
+          ..clear()
+          ..addAll(_defaultNotificationPrefs)
+          ..addAll(userData.notificationPrefs);
       }
     }
 
+    if (!mounted) return;
     setState(() {
       darkMode = themeMode;
       isLoading = false;
     });
   }
 
-  Future<void> _updatePrefs() async {
-    final user = authService.currentUser;
-    if (user == null) return;
-
-    await userRepository.updateNotificationPrefs(user.uid, {
-      'match': matchNotifications,
-      'chat': chatNotifications,
-      'like': likeNotifications,
+  Future<void> _updatePref(String key, bool value) async {
+    final previous = notificationPrefs[key] ?? true;
+    setState(() {
+      notificationPrefs[key] = value;
+      isSavingPrefs = true;
     });
+
+    final user = authService.currentUser;
+    if (user == null) {
+      setState(() => isSavingPrefs = false);
+      context.go('/login');
+      return;
+    }
+
+    try {
+      await userRepository.updateNotificationPrefs(user.uid, notificationPrefs);
+      if (!mounted) return;
+      setState(() => isSavingPrefs = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        notificationPrefs[key] = previous;
+        isSavingPrefs = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.primaryRed,
+          content: Text('Bildirim tercihi kaydedilemedi: $e'),
+        ),
+      );
+    }
   }
 
   void _logout() {
@@ -78,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               const Icon(
                 Icons.logout_rounded,
-                color: Color(0xFFE53935),
+                color: AppColors.primaryRed,
                 size: 44,
               ),
               const SizedBox(height: 16),
@@ -94,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text(
                 'Hesabından çıkış yapacaksın. Daha sonra tekrar giriş yapabilirsin.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFB3B3B3), height: 1.5),
+                style: TextStyle(color: AppColors.muted, height: 1.5),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -102,6 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () async {
+                    HapticFeedback.heavyImpact();
                     await authService.signOut();
 
                     if (!sheetContext.mounted) return;
@@ -110,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     context.go('/login');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE53935),
+                    backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -124,10 +162,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 10),
               TextButton(
-                onPressed: () => Navigator.pop(sheetContext),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(sheetContext);
+                },
                 child: const Text(
                   'Vazgeç',
-                  style: TextStyle(color: Color(0xFFB3B3B3)),
+                  style: TextStyle(color: AppColors.muted),
                 ),
               ),
             ],
@@ -148,14 +189,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: const ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.check_circle_rounded, color: Color(0xFF0F6A3D)),
+          leading: Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.primaryGreen,
+          ),
           title: Text(
-            'Turkce',
+            'Türkçe',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
           ),
           subtitle: Text(
             'Uygulama dili',
-            style: TextStyle(color: Color(0xFFB3B3B3)),
+            style: TextStyle(color: AppColors.muted),
           ),
         ),
         actions: [
@@ -163,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Tamam',
-              style: TextStyle(color: Color(0xFFE53935)),
+              style: TextStyle(color: AppColors.primaryRed),
             ),
           ),
         ],
@@ -177,8 +221,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (email == null || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFFE53935),
-          content: Text('Sifre sifirlama icin hesaba bagli email bulunamadi.'),
+          backgroundColor: AppColors.primaryRed,
+          content: Text('Şifre sıfırlama için hesaba bağlı email bulunamadı.'),
         ),
       );
       return;
@@ -190,9 +234,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFF0F6A3D),
+          backgroundColor: AppColors.primaryGreen,
           content: Text(
-            'Sifre sifirlama baglantisi email adresine gonderildi.',
+            'Şifre sıfırlama bağlantısı email adresine gönderildi.',
           ),
         ),
       );
@@ -200,8 +244,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFE53935),
-          content: Text('Sifre sifirlama hatasi: $e'),
+          backgroundColor: AppColors.primaryRed,
+          content: Text('Şifre sıfırlama hatası: $e'),
         ),
       );
     }
@@ -213,13 +257,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryRed))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primaryRed),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Header(onBack: () => context.go('/profile')),
+                    _Header(onBack: () => context.popOrGo('/profile')),
                     const SizedBox(height: 24),
                     const _SectionTitle(title: 'Hesap'),
                     const SizedBox(height: 12),
@@ -236,37 +282,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: _sendPasswordReset,
                     ),
                     const SizedBox(height: 22),
-                    const _SectionTitle(title: 'Bildirimler'),
+                    _NotificationSectionHeader(isSaving: isSavingPrefs),
                     const SizedBox(height: 12),
                     _SwitchTile(
                       icon: Icons.sports_soccer_rounded,
-                      title: 'Maç Bildirimleri',
-                      subtitle: 'Maç başlangıcı ve önemli anlar',
-                      value: matchNotifications,
-                      onChanged: (value) {
-                        setState(() => matchNotifications = value);
-                        _updatePrefs();
-                      },
+                      title: 'Maç Özeti',
+                      subtitle: 'Maç programı ve genel maç duyuruları',
+                      value: notificationPrefs['match'] ?? true,
+                      onChanged: (value) => _updatePref('match', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.timer_rounded,
+                      title: 'Maç Başlıyor',
+                      subtitle: 'Başlama saati yaklaşan maç hatırlatmaları',
+                      value: notificationPrefs['matchStart'] ?? true,
+                      onChanged: (value) => _updatePref('matchStart', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.sports_score_rounded,
+                      title: 'Gol ve Önemli Anlar',
+                      subtitle: 'Gol, kart ve maç içi kritik gelişmeler',
+                      value: notificationPrefs['goal'] ?? true,
+                      onChanged: (value) => _updatePref('goal', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.groups_rounded,
+                      title: 'Kadro Açıklandı',
+                      subtitle: 'İlk 11 ve kadro kurma fırsatları',
+                      value: notificationPrefs['lineup'] ?? true,
+                      onChanged: (value) => _updatePref('lineup', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.emoji_events_rounded,
+                      title: 'Tahmin Hatırlatmaları',
+                      subtitle: 'Tahmin süresi bitmeden önce uyarı al',
+                      value: notificationPrefs['prediction'] ?? true,
+                      onChanged: (value) => _updatePref('prediction', value),
                     ),
                     _SwitchTile(
                       icon: Icons.forum_rounded,
                       title: 'Sohbet Bildirimleri',
                       subtitle: 'Yeni mesaj ve oda aktiviteleri',
-                      value: chatNotifications,
-                      onChanged: (value) {
-                        setState(() => chatNotifications = value);
-                        _updatePrefs();
-                      },
+                      value: notificationPrefs['chat'] ?? true,
+                      onChanged: (value) => _updatePref('chat', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.comment_rounded,
+                      title: 'Yorum ve Cevaplar',
+                      subtitle: 'Gönderilerine gelen yorum ve cevaplar',
+                      value: notificationPrefs['comment'] ?? true,
+                      onChanged: (value) => _updatePref('comment', value),
                     ),
                     _SwitchTile(
                       icon: Icons.thumb_up_rounded,
-                      title: 'Beğeni Bildirimleri',
-                      subtitle: 'Kadro ve yorum beğenileri',
-                      value: likeNotifications,
-                      onChanged: (value) {
-                        setState(() => likeNotifications = value);
-                        _updatePrefs();
-                      },
+                      title: 'Beğeniler',
+                      subtitle: 'Kadro, gönderi ve yorum beğenileri',
+                      value: notificationPrefs['like'] ?? true,
+                      onChanged: (value) => _updatePref('like', value),
+                    ),
+                    _SwitchTile(
+                      icon: Icons.flag_rounded,
+                      title: 'Görev ve Ödüller',
+                      subtitle: 'Tamamlanan görev, XP ve rozet bildirimleri',
+                      value: notificationPrefs['mission'] ?? true,
+                      onChanged: (value) => _updatePref('mission', value),
                     ),
                     const SizedBox(height: 22),
                     const _SectionTitle(title: 'Uygulama'),
@@ -291,7 +370,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.info_rounded,
                       title: 'Hakkında',
                       subtitle: 'Uygulama bilgileri ve sürüm',
-                      onTap: () => context.go('/about'),
+                      onTap: () => context.push('/about'),
                     ),
                     _SettingsTile(
                       icon: Icons.feedback_rounded,
@@ -306,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.report_rounded,
                       title: 'Raporlarım',
                       subtitle: 'Gönderdiğin şikayetleri görüntüle',
-                      onTap: () => context.go('/reports'),
+                      onTap: () => context.push('/reports'),
                     ),
                     _SettingsTile(
                       icon: Icons.person_off_rounded,
@@ -318,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.privacy_tip_rounded,
                       title: 'Gizlilik ve Kullanım Şartları',
                       subtitle: 'Platform kuralları',
-                      onTap: () => context.go('/policy'),
+                      onTap: () => context.push('/policy'),
                     ),
                     _SettingsTile(
                       icon: Icons.no_accounts_rounded,
@@ -381,6 +460,44 @@ class _Header extends StatelessWidget {
   }
 }
 
+class _NotificationSectionHeader extends StatelessWidget {
+  final bool isSaving;
+
+  const _NotificationSectionHeader({required this.isSaving});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const _SectionTitle(title: 'Bildirimler'),
+        const Spacer(),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: isSaving
+              ? const SizedBox(
+                  key: ValueKey('saving'),
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primaryGreen,
+                  ),
+                )
+              : const Text(
+                  key: ValueKey('saved'),
+                  'Kaydedildi',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   final String title;
 
@@ -417,7 +534,10 @@ class _SettingsTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: PremiumCard(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
@@ -487,7 +607,10 @@ class _SwitchTile extends StatelessWidget {
           trailing: Switch(
             value: value,
             activeThumbColor: AppColors.primaryRed,
-            onChanged: onChanged,
+            onChanged: (v) {
+              HapticFeedback.lightImpact();
+              onChanged(v);
+            },
           ),
         ),
       ),

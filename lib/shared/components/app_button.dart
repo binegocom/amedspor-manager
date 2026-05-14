@@ -13,6 +13,7 @@ class AppButton extends StatelessWidget {
   final double? width;
   final double height;
   final Color? color;
+  final Color? textColor;
 
   const AppButton({
     super.key,
@@ -24,12 +25,13 @@ class AppButton extends StatelessWidget {
     this.width,
     this.height = 56,
     this.color,
+    this.textColor,
   });
 
   @override
   Widget build(BuildContext context) {
     Color bgColor;
-    Color textColor = AppColors.white;
+    Color effectiveTextColor = textColor ?? AppColors.white;
     BorderSide border = BorderSide.none;
 
     switch (type) {
@@ -58,7 +60,7 @@ class AppButton extends StatelessWidget {
         onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
-          foregroundColor: textColor,
+          foregroundColor: effectiveTextColor,
           elevation: 0,
           side: border,
           shape: RoundedRectangleBorder(
@@ -81,7 +83,15 @@ class AppButton extends StatelessWidget {
                     Icon(icon, size: 20),
                     const SizedBox(width: 10),
                   ],
-                  Text(text, style: AppTextStyles.button),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        text,
+                        style: AppTextStyles.button.copyWith(color: effectiveTextColor),
+                      ),
+                    ),
+                  ),
                 ],
               ),
       ),

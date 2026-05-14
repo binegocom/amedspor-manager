@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 import '../../../../data/repositories/search_repository.dart';
 
@@ -96,7 +97,7 @@ class _SearchScreenState extends State<SearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/feed')),
+            _Header(onBack: () => context.popOrGo('/feed')),
 
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),

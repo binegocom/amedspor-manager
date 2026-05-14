@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/report_model.dart';
@@ -112,7 +113,10 @@ class _ReportScreenState extends State<ReportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(title: targetTitle, onBack: () => context.go('/feed')),
+              _Header(
+                title: targetTitle,
+                onBack: () => context.popOrGo('/feed'),
+              ),
               const SizedBox(height: 24),
               const Text(
                 'Neden raporluyorsun?',

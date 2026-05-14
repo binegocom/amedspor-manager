@@ -103,16 +103,10 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final predictionRef = firestoreService.predictions.doc(prediction.id);
-        final userRef = firestoreService.users.doc(prediction.userId);
 
-        final predictionDoc = await transaction.get(predictionRef);
-        final oldPoints = predictionDoc.data()?['pointsEarned'] ?? 0;
+        await transaction.get(predictionRef);
 
         transaction.update(predictionRef, {'pointsEarned': points});
-
-        transaction.update(userRef, {
-          'points': FieldValue.increment(points - oldPoints),
-        });
       });
 
       if (!mounted) return;
@@ -240,15 +234,8 @@ class _AdminPredictionsScreenState extends State<AdminPredictionsScreen> {
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final predictionRef = firestoreService.predictions.doc(prediction.id);
-        final userRef = firestoreService.users.doc(prediction.userId);
 
         transaction.delete(predictionRef);
-
-        if (prediction.pointsEarned > 0) {
-          transaction.update(userRef, {
-            'points': FieldValue.increment(-prediction.pointsEarned),
-          });
-        }
       });
 
       setState(() {

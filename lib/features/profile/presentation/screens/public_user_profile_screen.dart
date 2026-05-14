@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/navigation_helpers.dart';
 import '../../../../data/models/app_user_model.dart';
 import '../../../../data/models/post_model.dart';
 import '../../../../data/repositories/post_repository.dart';
@@ -59,7 +60,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
       } else {
         await userRepository.followUser(user.uid, widget.userId);
       }
-      
+
       setState(() {
         isFollowing = !isFollowing;
         isActionLoading = false;
@@ -69,7 +70,9 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.primaryGreen,
-          content: Text(isFollowing ? 'Kullanıcı takip edildi.' : 'Takipten çıkarıldı.'),
+          content: Text(
+            isFollowing ? 'Kullanıcı takip edildi.' : 'Takipten çıkarıldı.',
+          ),
         ),
       );
     } catch (e) {
@@ -85,7 +88,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
   }
 
   void _reportUser() {
-    context.go('/report/user/${widget.userId}');
+    context.push('/report/user/${widget.userId}');
   }
 
   @override
@@ -102,7 +105,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Header(
-                onBack: () => context.go('/leaderboard'),
+                onBack: () => context.popOrGo('/leaderboard'),
                 onReport: _reportUser,
               ),
 
@@ -185,7 +188,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                           (post) => _PostPreviewCard(
                             title: post.title,
                             content: post.content,
-                            onTap: () => context.go('/post/${post.id}'),
+                            onTap: () => context.push('/post/${post.id}'),
                           ),
                         )
                         .toList(),
@@ -274,7 +277,11 @@ class _ProfileHero extends StatelessWidget {
                       width: 94,
                       height: 94,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Icon(Icons.person_rounded, color: Colors.white, size: 54),
+                      errorWidget: (_, _, _) => const Icon(
+                        Icons.person_rounded,
+                        color: Colors.white,
+                        size: 54,
+                      ),
                     ),
                   ),
           ),
@@ -315,7 +322,14 @@ class _ProfileHero extends StatelessWidget {
                   ),
                 ),
                 icon: isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : Icon(
                         isFollowing
                             ? Icons.check_circle_rounded
@@ -346,11 +360,17 @@ class _StatsRow extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(label: 'Takipçi', value: '${user?.followersCount ?? 0}'),
+          child: _StatCard(
+            label: 'Takipçi',
+            value: '${user?.followersCount ?? 0}',
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(label: 'Takip', value: '${user?.followingCount ?? 0}'),
+          child: _StatCard(
+            label: 'Takip',
+            value: '${user?.followingCount ?? 0}',
+          ),
         ),
       ],
     );

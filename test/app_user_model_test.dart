@@ -19,18 +19,45 @@ void main() {
         fcmToken: 'fcm-token',
       );
 
-      expect(user.toMap(), {
-        'username': 'amedli',
-        'email': 'user@example.com',
-        'avatarUrl': 'https://example.com/avatar.jpg',
-        'points': 12,
-        'badges': ['Yeni Taraftar'],
-        'createdAt': createdAt.toIso8601String(),
-        'city': 'Diyarbakir',
-        'supportYear': '2024',
-        'role': 'user',
-        'fcmToken': 'fcm-token',
-      });
+      expect(
+        user.toMap(),
+        allOf([
+          containsPair('username', 'amedli'),
+          containsPair('email', 'user@example.com'),
+          containsPair('avatarUrl', 'https://example.com/avatar.jpg'),
+          containsPair('points', 12),
+          containsPair('badges', ['Yeni Taraftar']),
+          containsPair('createdAt', createdAt.toIso8601String()),
+          containsPair('city', 'Diyarbakir'),
+          containsPair('supportYear', '2024'),
+          containsPair('role', 'user'),
+          containsPair('disabled', false),
+          containsPair('notificationPrefs', {
+            'match': true,
+            'matchStart': true,
+            'goal': true,
+            'lineup': true,
+            'prediction': true,
+            'chat': true,
+            'comment': true,
+            'like': true,
+            'mission': true,
+          }),
+          containsPair('followersCount', 0),
+          containsPair('followingCount', 0),
+          containsPair('xp', 0),
+          containsPair('level', 1),
+          containsPair('levelTitle', 'Yeni Taraftar'),
+          containsPair('badgesCount', 0),
+          containsPair('missionsCompleted', 0),
+          containsPair('currentLoginStreak', 0),
+          containsPair('bestLoginStreak', 0),
+          containsPair('seasonXp', 0),
+          containsPair('seasonPoints', 0),
+          containsPair('gamificationEnabled', true),
+          containsPair('fcmToken', 'fcm-token'),
+        ]),
+      );
     });
 
     test('uses defaults for optional Firestore fields', () {
@@ -46,6 +73,16 @@ void main() {
       expect(user.supportYear, '2024');
       expect(user.role, 'user');
       expect(user.fcmToken, isNull);
+      expect(user.notificationPrefs['matchStart'], isTrue);
+      expect(user.notificationPrefs['goal'], isTrue);
+      expect(user.notificationPrefs['lineup'], isTrue);
+      expect(user.notificationPrefs['prediction'], isTrue);
+      expect(user.notificationPrefs['comment'], isTrue);
+      expect(user.notificationPrefs['mission'], isTrue);
+      expect(user.xp, 0);
+      expect(user.level, 1);
+      expect(user.levelTitle, 'Yeni Taraftar');
+      expect(user.gamificationEnabled, isTrue);
     });
   });
 }

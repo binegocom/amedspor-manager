@@ -18,10 +18,58 @@ class UserRepository {
     return AppUserModel.fromMap(doc.id, doc.data()!);
   }
 
-  Future<void> updateNotificationPrefs(String userId, Map<String, bool> prefs) async {
+  Future<void> updateNotificationPrefs(
+    String userId,
+    Map<String, bool> prefs,
+  ) async {
     await firestoreService.users.doc(userId).update({
       'notificationPrefs': prefs,
     });
+  }
+
+  Future<void> markClubCreated(String userId, String clubId) async {
+    final userRef = firestoreService.users.doc(userId);
+    final userSnapshot = await userRef.get();
+    final managerFields = {
+      'hasClub': true,
+      'clubId': clubId,
+      'hasManagerMode': true,
+      'lastEnergyRefill': DateTime.now().toIso8601String(),
+    };
+
+    if (userSnapshot.exists) {
+      await userRef.update(managerFields);
+    } else {
+      await userRef.set({
+        ...managerFields,
+        'username': '',
+        'email': authService.currentUser?.email ?? '',
+        'avatarUrl': '',
+        'points': 0,
+        'badges': <String>[],
+        'createdAt': DateTime.now().toIso8601String(),
+        'city': '',
+        'supportYear': DateTime.now().year.toString(),
+        'role': 'user',
+        'disabled': false,
+        'energy': 100,
+        'coins': 100,
+        'managerXp': 0,
+        'managerLevel': 1,
+        'followersCount': 0,
+        'followingCount': 0,
+        'xp': 0,
+        'level': 1,
+        'levelTitle': 'Yeni Taraftar',
+        'badgesCount': 0,
+        'missionsCompleted': 0,
+        'currentLoginStreak': 0,
+        'bestLoginStreak': 0,
+        'seasonXp': 0,
+        'seasonPoints': 0,
+        'gamificationEnabled': true,
+      });
+    }
   }
 
   Future<bool> isFollowing(String currentUserId, String targetUserId) async {
@@ -39,8 +87,12 @@ class UserRepository {
     final currentUserRef = firestoreService.users.doc(currentUserId);
     final targetUserRef = firestoreService.users.doc(targetUserId);
 
-    final followingRef = currentUserRef.collection('following').doc(targetUserId);
-    final followersRef = targetUserRef.collection('followers').doc(currentUserId);
+    final followingRef = currentUserRef
+        .collection('following')
+        .doc(targetUserId);
+    final followersRef = targetUserRef
+        .collection('followers')
+        .doc(currentUserId);
 
     batch.set(followingRef, {'createdAt': FieldValue.serverTimestamp()});
     batch.set(followersRef, {'createdAt': FieldValue.serverTimestamp()});
@@ -57,8 +109,12 @@ class UserRepository {
     final currentUserRef = firestoreService.users.doc(currentUserId);
     final targetUserRef = firestoreService.users.doc(targetUserId);
 
-    final followingRef = currentUserRef.collection('following').doc(targetUserId);
-    final followersRef = targetUserRef.collection('followers').doc(currentUserId);
+    final followingRef = currentUserRef
+        .collection('following')
+        .doc(targetUserId);
+    final followersRef = targetUserRef
+        .collection('followers')
+        .doc(currentUserId);
 
     batch.delete(followingRef);
     batch.delete(followersRef);

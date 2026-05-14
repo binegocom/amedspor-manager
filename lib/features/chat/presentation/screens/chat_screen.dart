@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../data/models/message_model.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
+import '../../../moderation/domain/services/auto_moderation_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String roomId;
@@ -56,10 +58,35 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    final username = user.email ?? 'Taraftar';
+    final isVerified =
+        username.contains('admin') ||
+        username.contains('oyuncu') ||
+        username.endsWith('amedspor.org');
+
+    final modResult = await AutoModerationService().moderateText(
+      userId: user.uid,
+      username: username,
+      text: text,
+      roomId: widget.roomId,
+      isExecutiveOrPlayer: isVerified,
+    );
+
+    if (!modResult.isAllowed) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE53935),
+          content: Text(modResult.errorMessage),
+        ),
+      );
+      return;
+    }
+
     final message = MessageModel(
       id: uuid.v4(),
       userId: user.uid,
-      username: user.email ?? 'Taraftar',
+      username: username,
       text: text,
       likes: 0,
       createdAt: DateTime.now(),
@@ -314,6 +341,19 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _likeMessage(MessageModel message) async {
+    if (!isLoggedIn) {
+      _showLoginRequired();
+      return;
+    }
+    try {
+      await chatRepository.likeMessage(
+        roomId: widget.roomId,
+        messageId: message.id,
+      );
+    } catch (_) {}
+  }
+
   bool get isLoggedIn => authService.currentUser != null;
 
   @override
@@ -334,7 +374,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _ChatHeader(
               title: roomTitle,
               isCustomRoom: isCustomRoom,
-              onBack: () => context.go('/home'),
+              onBack: () => context.popOrGo('/home'),
               onCreateRoom: _createRoom,
               onDeleteRoom: _deleteCurrentRoom,
             ),
@@ -368,6 +408,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   }
 
                   return ListView.separated(
+                    reverse: true,
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                     itemCount: messages.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -380,6 +421,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         isMe:
                             currentUser != null &&
                             message.userId == currentUser.uid,
+                        onLike: () => _likeMessage(message),
                         onDelete: () => _deleteMessage(message),
                       );
                     },
@@ -537,11 +579,13 @@ class _RoomChip extends StatelessWidget {
 class _ChatBubble extends StatelessWidget {
   final MessageModel message;
   final bool isMe;
+  final VoidCallback onLike;
   final VoidCallback onDelete;
 
   const _ChatBubble({
     required this.message,
     required this.isMe,
+    required this.onLike,
     required this.onDelete,
   });
 
@@ -552,41 +596,105 @@ class _ChatBubble extends StatelessWidget {
         : const Color(0xFF1A1A1A);
 
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final isVerified =
+        message.username.contains('admin') ||
+        message.username.contains('oyuncu') ||
+        message.username.endsWith('amedspor.org');
 
     return Column(
       crossAxisAlignment: align,
       children: [
-        Text(
-          isMe ? 'Sen' : message.username,
-          style: TextStyle(
-            color: isMe ? const Color(0xFFE53935) : Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isMe ? 'Sen' : message.username.split('@').first,
+              style: TextStyle(
+                color: isMe
+                    ? const Color(0xFFE53935)
+                    : (isVerified ? const Color(0xFF0F6A3D) : Colors.white70),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (isVerified) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.verified_rounded,
+                color: Color(0xFF0F6A3D),
+                size: 13,
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 5),
         GestureDetector(
+          onDoubleTap: onLike,
           onLongPress: isMe ? onDelete : null,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 280),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isMe ? 18 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 18),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                constraints: const BoxConstraints(maxWidth: 280),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(isMe ? 18 : 4),
+                    bottomRight: Radius.circular(isMe ? 4 : 18),
+                  ),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Text(
+                  message.text,
+                  style: const TextStyle(color: Colors.white, height: 1.35),
+                ),
               ),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Text(
-              message.text,
-              style: const TextStyle(color: Colors.white, height: 1.35),
-            ),
+              if (message.likes > 0)
+                Positioned(
+                  right: isMe ? null : -6,
+                  left: isMe ? -6 : null,
+                  bottom: -6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF0E0E0E),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.favorite_rounded,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${message.likes}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           '${message.createdAt.hour.toString().padLeft(2, '0')}:${message.createdAt.minute.toString().padLeft(2, '0')}',
           style: const TextStyle(color: Color(0xFF777777), fontSize: 11),

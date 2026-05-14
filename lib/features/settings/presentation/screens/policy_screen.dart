@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 class PolicyScreen extends StatelessWidget {
   const PolicyScreen({super.key});
@@ -13,7 +13,7 @@ class PolicyScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/settings')),
+            _Header(onBack: () => context.popOrGo('/settings')),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),

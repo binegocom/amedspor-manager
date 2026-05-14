@@ -16,6 +16,7 @@ dependencies:
   firebase_core: ^4.7.0
   firebase_auth: ^6.4.0
   cloud_firestore: ^6.3.0
+  cloud_functions: ^6.3.0
   firebase_storage: ^13.3.0
   firebase_messaging: ^16.2.0
   uuid: ^4.5.3
@@ -30,6 +31,7 @@ dependencies:
   intl: ^0.20.2
   flutter_riverpod: ^2.6.1
   cached_network_image: ^3.4.1
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -37,6 +39,7 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
+  build_runner: ^2.4.9
 
 flutter_launcher_icons:
   android: true
@@ -54,3 +57,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/sounds/
+  
+  # Optimize build for faster startup
+  generate: true
+  # Fontler için (varsa)
+  # fonts:
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf

@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyA6h5oQca4uezX5FqWh4E758KRnLxxnJJE',
+    apiKey: 'AIzaSyAX5yUdNxyYTSnFYbwl0eXpYcfgVqpxZRQ',
     appId: '1:346583132476:web:5f9066f1ef53a97de41639',
     messagingSenderId: '346583132476',
     projectId: 'amedsporapp',
@@ -52,32 +52,34 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDhDp4hauleQAPk_O9uxM8NJHvnN0IKv5A',
-    appId: '1:346583132476:android:d7efb223a146adc4e41639',
+    appId: '1:346583132476:android:c5667c4cf5db9aa9e41639',
     messagingSenderId: '346583132476',
     projectId: 'amedsporapp',
     storageBucket: 'amedsporapp.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCsNA49pR-Me0C6xg5ijGY8-DUNzg0tCSA',
+    apiKey: 'AIzaSyCbjYQkFJ5VM2OZz8v9sFoaAHQqoGWLoiY',
     appId: '1:346583132476:ios:679366f352c6e049e41639',
     messagingSenderId: '346583132476',
     projectId: 'amedsporapp',
     storageBucket: 'amedsporapp.firebasestorage.app',
+    iosClientId: '346583132476-4nesf78d4at7t8psmdn7s69oj6bbne73.apps.googleusercontent.com',
     iosBundleId: 'com.example.amedsporApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCsNA49pR-Me0C6xg5ijGY8-DUNzg0tCSA',
+    apiKey: 'AIzaSyCbjYQkFJ5VM2OZz8v9sFoaAHQqoGWLoiY',
     appId: '1:346583132476:ios:679366f352c6e049e41639',
     messagingSenderId: '346583132476',
     projectId: 'amedsporapp',
     storageBucket: 'amedsporapp.firebasestorage.app',
+    iosClientId: '346583132476-4nesf78d4at7t8psmdn7s69oj6bbne73.apps.googleusercontent.com',
     iosBundleId: 'com.example.amedsporApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyA6h5oQca4uezX5FqWh4E758KRnLxxnJJE',
+    apiKey: 'AIzaSyAX5yUdNxyYTSnFYbwl0eXpYcfgVqpxZRQ',
     appId: '1:346583132476:web:ac383801cdbdf4f6e41639',
     messagingSenderId: '346583132476',
     projectId: 'amedsporapp',
@@ -85,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'amedsporapp.firebasestorage.app',
     measurementId: 'G-XFX2FR04SD',
   );
+
 }

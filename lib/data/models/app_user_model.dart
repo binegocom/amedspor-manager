@@ -16,6 +16,21 @@ class AppUserModel {
   final int followersCount;
   final int followingCount;
   final bool isDisabled;
+  final bool hasClub;
+  final String? clubId;
+  final int energy; // 0-100 (Manager energy for training/matches)
+
+  // Moderation & Strike fields
+  final int strikeCount;
+  final List<String> activeStrikes;
+
+  // Manager Fields (Top Eleven style)
+  final bool hasManagerMode; // True if user has manager features
+  final String? teamId; // Link to UserTeamModel
+  final int coins; // Premium currency
+  final int managerXp; // Manager XP
+  final int managerLevel; // Manager level
+  final DateTime? lastEnergyRefill; // Last energy refill time
 
   // Gamification Fields
   final int xp;
@@ -44,10 +59,27 @@ class AppUserModel {
     required this.role,
     this.fcmToken,
     this.isDisabled = false,
+    this.hasClub = false,
+    this.clubId,
+    this.energy = 100,
+    this.strikeCount = 0,
+    this.activeStrikes = const [],
+    this.hasManagerMode = false,
+    this.teamId,
+    this.coins = 100,
+    this.managerXp = 0,
+    this.managerLevel = 1,
+    this.lastEnergyRefill,
     this.notificationPrefs = const {
       'match': true,
+      'matchStart': true,
+      'goal': true,
+      'lineup': true,
+      'prediction': true,
       'chat': true,
+      'comment': true,
       'like': true,
+      'mission': true,
     },
     this.followersCount = 0,
     this.followingCount = 0,
@@ -78,12 +110,32 @@ class AppUserModel {
       supportYear: map['supportYear'] ?? '2024',
       role: map['role'] ?? 'user',
       isDisabled: map['disabled'] ?? false,
+      hasClub: map['hasClub'] ?? false,
+      clubId: map['clubId'] as String?,
+      energy: map['energy'] ?? 100,
+      strikeCount: map['strikeCount'] ?? 0,
+      activeStrikes: (map['activeStrikes'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      hasManagerMode: map['hasManagerMode'] ?? false,
+      teamId: map['teamId'] as String?,
+      coins: map['coins'] ?? 100,
+      managerXp: map['managerXp'] ?? 0,
+      managerLevel: map['managerLevel'] ?? 1,
+      lastEnergyRefill: _parseNullableDate(map['lastEnergyRefill']),
       fcmToken: map['fcmToken'] as String?,
-      notificationPrefs: Map<String, bool>.from(map['notificationPrefs'] ?? {
-        'match': true,
-        'chat': true,
-        'like': true,
-      }),
+      notificationPrefs: Map<String, bool>.from(
+        map['notificationPrefs'] ??
+            {
+              'match': true,
+              'matchStart': true,
+              'goal': true,
+              'lineup': true,
+              'prediction': true,
+              'chat': true,
+              'comment': true,
+              'like': true,
+              'mission': true,
+            },
+      ),
       followersCount: map['followersCount'] ?? 0,
       followingCount: map['followingCount'] ?? 0,
       xp: map['xp'] ?? 0,
@@ -113,6 +165,17 @@ class AppUserModel {
       'supportYear': supportYear,
       'role': role,
       'disabled': isDisabled,
+      'hasClub': hasClub,
+      'clubId': clubId,
+      'energy': energy,
+      'strikeCount': strikeCount,
+      'activeStrikes': activeStrikes,
+      'hasManagerMode': hasManagerMode,
+      'teamId': teamId,
+      'coins': coins,
+      'managerXp': managerXp,
+      'managerLevel': managerLevel,
+      if (lastEnergyRefill != null) 'lastEnergyRefill': lastEnergyRefill?.toIso8601String(),
       'notificationPrefs': notificationPrefs,
       'followersCount': followersCount,
       'followingCount': followingCount,
@@ -123,7 +186,8 @@ class AppUserModel {
       'missionsCompleted': missionsCompleted,
       'currentLoginStreak': currentLoginStreak,
       'bestLoginStreak': bestLoginStreak,
-      if (lastLoginRewardDate != null) 'lastLoginRewardDate': lastLoginRewardDate?.toIso8601String(),
+      if (lastLoginRewardDate != null)
+        'lastLoginRewardDate': lastLoginRewardDate?.toIso8601String(),
       if (lastActiveAt != null) 'lastActiveAt': lastActiveAt?.toIso8601String(),
       'seasonXp': seasonXp,
       'seasonPoints': seasonPoints,
@@ -165,6 +229,17 @@ class AppUserModel {
     int? followersCount,
     int? followingCount,
     bool? isDisabled,
+    bool? hasClub,
+    String? clubId,
+    int? energy,
+    int? strikeCount,
+    List<String>? activeStrikes,
+    bool? hasManagerMode,
+    String? teamId,
+    int? coins,
+    int? managerXp,
+    int? managerLevel,
+    DateTime? lastEnergyRefill,
     int? xp,
     int? level,
     String? levelTitle,
@@ -194,6 +269,17 @@ class AppUserModel {
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       isDisabled: isDisabled ?? this.isDisabled,
+      hasClub: hasClub ?? this.hasClub,
+      clubId: clubId ?? this.clubId,
+      energy: energy ?? this.energy,
+      strikeCount: strikeCount ?? this.strikeCount,
+      activeStrikes: activeStrikes ?? this.activeStrikes,
+      hasManagerMode: hasManagerMode ?? this.hasManagerMode,
+      teamId: teamId ?? this.teamId,
+      coins: coins ?? this.coins,
+      managerXp: managerXp ?? this.managerXp,
+      managerLevel: managerLevel ?? this.managerLevel,
+      lastEnergyRefill: lastEnergyRefill ?? this.lastEnergyRefill,
       xp: xp ?? this.xp,
       level: level ?? this.level,
       levelTitle: levelTitle ?? this.levelTitle,

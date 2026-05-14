@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/message_model.dart';
 import '../services/firebase/firebase_providers.dart';
 
@@ -39,6 +40,15 @@ class ChatRepository {
         .messages(roomId)
         .doc(message.id)
         .set(message.toMap());
+  }
+
+  Future<void> likeMessage({
+    required String roomId,
+    required String messageId,
+  }) async {
+    await firestoreService.messages(roomId).doc(messageId).update({
+      'likes': FieldValue.increment(1),
+    });
   }
 
   Future<void> deleteMessage({

@@ -10,15 +10,17 @@ class ResetService {
       'matches',
       'predictions',
       'missions',
-      'user_missions',
       'posts',
-      'comments',
       'lineups',
-      'xp_events',
       'reports',
       'notifications',
-      'chat_rooms',
-      'messages',
+      'chatRooms',
+      'badges',
+      'seasons',
+      'gamificationRules',
+      'feedback',
+      'errorReports',
+      'auditLogs',
     ];
 
     for (final collectionName in collections) {
@@ -29,7 +31,7 @@ class ResetService {
   Future<void> resetAndSeedPlayers() async {
     // 1. Önce mevcut oyuncuları sil
     await _deleteCollection('players');
-    
+
     // 2. Yeni kadroyu seed et
     // Not: Circular dependency olmaması için seedService'i burada local olarak import veya çağrı ile kullanabiliriz.
     // Ancak daha kolayı SeedService'i Admin panelinde çağırmaktır.
@@ -43,13 +45,13 @@ class ResetService {
   Future<void> _deleteCollection(String collectionPath) async {
     final collection = _firestore.collection(collectionPath);
     final snapshots = await collection.get();
-    
+
     // Web uyumlu silme işlemi (batch kullanarak)
     final batch = _firestore.batch();
     for (final doc in snapshots.docs) {
       batch.delete(doc.reference);
     }
-    
+
     if (snapshots.docs.isNotEmpty) {
       await batch.commit();
     }

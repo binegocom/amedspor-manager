@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -102,7 +103,7 @@ class AdminDashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Hızlı Erişim', style: AppTextStyles.h2),
+                        const Text('Hızlı Erişim & İş Akışları', style: AppTextStyles.h2),
                         const SizedBox(height: 24),
                         GridView.count(
                           crossAxisCount: constraints.maxWidth > 600 ? 2 : 1,
@@ -113,9 +114,11 @@ class AdminDashboardScreen extends StatelessWidget {
                           childAspectRatio: 2.2,
                           children: [
                             _ActionCard(title: 'Canlı Maç Yönetimi', subtitle: 'Skor ve olay takibi', icon: Icons.live_tv_rounded, onTap: () => context.go('/admin/matches')),
-                            _ActionCard(title: 'İçerik Moderasyonu', subtitle: 'Rapor ve yorum denetimi', icon: Icons.gavel_rounded, onTap: () => context.go('/admin/reports')),
-                            _ActionCard(title: 'Kullanıcı Yetkileri', subtitle: 'Rol ve erişim yönetimi', icon: Icons.admin_panel_settings_rounded, onTap: () => context.go('/admin/users')),
-                            _ActionCard(title: 'Sistem Ayarları', subtitle: 'Bakım modu ve konfigürasyon', icon: Icons.settings_suggest_rounded, onTap: () => context.go('/admin/settings')),
+                            _ActionCard(title: 'İçerik Moderasyonu', subtitle: 'Rapor ve ihlal akışları', icon: Icons.gavel_rounded, onTap: () => context.go('/admin/reports')),
+                            _ActionCard(title: 'RBAC & Yetkiler', subtitle: 'Custom Claims ve roller', icon: Icons.admin_panel_settings_rounded, onTap: () => context.go('/admin/users')),
+                            _ActionCard(title: 'Sistem Sağlığı (Health)', subtitle: 'Veritabanı ve hata logları', icon: Icons.health_and_safety_rounded, onTap: () => context.go('/admin/errors')),
+                            _ActionCard(title: 'Analitik Metrikleri', subtitle: 'Performans ve tutma', icon: Icons.analytics_rounded, onTap: () => context.go('/admin/dashboard')),
+                            _ActionCard(title: 'Sistem Ayarları', subtitle: 'İçerik ve yapılandırma', icon: Icons.settings_suggest_rounded, onTap: () => context.go('/admin/settings')),
                           ],
                         ),
                       ],
@@ -144,27 +147,41 @@ class AdminDashboardScreen extends StatelessWidget {
 class _PlatformStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          _StatusItem(label: 'Firebase', status: 'Optimal', color: const Color(0xFF0F6A3D)),
-          _StatusDivider(),
-          _StatusItem(label: 'Bildirimler', status: 'Aktif', color: const Color(0xFF0F6A3D)),
-          _StatusDivider(),
-          _StatusItem(label: 'Güvenlik', status: 'Sertifikalı', color: const Color(0xFF0F6A3D)),
-          const Spacer(),
-          const Text(
-            'Sistem Güncellemesi: 12.05.2024',
-            style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('appSettings').doc('systemHealth').snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+        final dbStatus = data['databaseStatus'] as String? ?? 'Bağlantı Aktif';
+        final notifStatus = data['notificationsStatus'] as String? ?? 'Sırada';
+        final secStatus = data['securityStatus'] as String? ?? 'Özel Kurallar';
+        final updateStr = data['lastUpdateText'] as String? ?? 'Sistem Güncel (Anlık Telemetri)';
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111111),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white10),
           ),
-        ],
-      ),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _StatusItem(label: 'Firebase Veritabanı', status: dbStatus, color: const Color(0xFF0F6A3D)),
+              _StatusDivider(),
+              _StatusItem(label: 'Bildirim Servisi', status: notifStatus, color: const Color(0xFF0F6A3D)),
+              _StatusDivider(),
+              _StatusItem(label: 'RBAC Kalkanı', status: secStatus, color: const Color(0xFFE53935)),
+              const Spacer(),
+              Text(
+                updateStr,
+                style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -354,7 +371,10 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PremiumCard(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,

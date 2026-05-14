@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/admin_guard.dart';
+import '../../../../core/guards/admin_guard.dart';
 import 'admin_sidebar.dart';
 import 'admin_search_dialog.dart';
 
@@ -103,7 +103,9 @@ class _AdminLayoutState extends State<AdminLayout> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _AdminTopBar(compact: compact),
-                        if (widget.title != null || widget.subtitle != null || widget.actions != null)
+                        if (widget.title != null ||
+                            widget.subtitle != null ||
+                            widget.actions != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                             child: Row(
@@ -111,7 +113,8 @@ class _AdminLayoutState extends State<AdminLayout> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (widget.title != null)
                                         Text(
@@ -147,11 +150,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                             ),
                           ),
                         const SizedBox(height: 24),
-                        Expanded(
-                          child: ClipRect(
-                            child: widget.child,
-                          ),
-                        ),
+                        Expanded(child: ClipRect(child: widget.child)),
                       ],
                     ),
                   ),
@@ -197,10 +196,17 @@ class _AdminTopBar extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: 'Sistemde ara...',
                     hintStyle: const TextStyle(color: Colors.white24),
-                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.white24, size: 18),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: Colors.white24,
+                      size: 18,
+                    ),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.03),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
                 ),
@@ -209,8 +215,12 @@ class _AdminTopBar extends StatelessWidget {
           ],
           const Spacer(),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
+            tooltip: 'Duyurular',
+            onPressed: () => context.go('/admin/notifications'),
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Colors.white70,
+            ),
           ),
           const SizedBox(width: 8),
           _UserMenu(),
@@ -242,12 +252,29 @@ class _UserMenu extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-              Text('Yönetici', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10)),
+              const Text(
+                'Admin',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Yönetici',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 10,
+                ),
+              ),
             ],
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white24, size: 16),
+          const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.white24,
+            size: 16,
+          ),
         ],
       ),
     );

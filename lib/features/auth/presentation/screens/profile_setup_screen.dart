@@ -10,7 +10,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/components/app_button.dart';
 import '../../../../shared/components/app_text_field.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -238,7 +238,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white10),
             ),
-            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.arrow_back_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -274,7 +278,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3), width: 1.5),
+            border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.gold.withValues(alpha: 0.1),
@@ -311,7 +318,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             letterSpacing: 2,
                           ),
                         ),
-                        Image.asset('assets/images/app_icon.png', width: 32, height: 32),
+                        Image.asset(
+                          'assets/images/app_icon.png',
+                          width: 32,
+                          height: 32,
+                        ),
                       ],
                     ),
                     const Spacer(),
@@ -324,7 +335,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                usernameController.text.isEmpty ? 'KULLANICI ADI' : usernameController.text.toUpperCase(),
+                                usernameController.text.isEmpty
+                                    ? 'KULLANICI ADI'
+                                    : usernameController.text.toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -336,8 +349,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                cityController.text.isEmpty ? 'ŞEHİR BELİRTİLMEDİ' : cityController.text.toUpperCase(),
-                                style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.bold),
+                                cityController.text.isEmpty
+                                    ? 'ŞEHİR BELİRTİLMEDİ'
+                                    : cityController.text.toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -370,7 +389,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.primaryGreen, width: 2),
-        boxShadow: [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryGreen.withValues(alpha: 0.2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: ClipOval(
         child: selectedAvatar != null
@@ -384,9 +408,23 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 8, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -405,7 +443,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   height: 110,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryRed.withValues(alpha: 0.5), width: 2),
+                    border: Border.all(
+                      color: AppColors.primaryRed.withValues(alpha: 0.5),
+                      width: 2,
+                    ),
                   ),
                 ),
                 Container(
@@ -423,23 +464,43 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     ],
                   ),
                   child: selectedAvatar == null
-                      ? const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 32)
-                      : ClipOval(child: Image.file(selectedAvatar!, fit: BoxFit.cover)),
+                      ? const Icon(
+                          Icons.add_a_photo_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        )
+                      : ClipOval(
+                          child: Image.file(selectedAvatar!, fit: BoxFit.cover),
+                        ),
                 ),
                 Positioned(
                   right: 0,
                   bottom: 0,
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(color: AppColors.primaryGreen, shape: BoxShape.circle),
-                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          const Text('Profil Fotoğrafı Ekle', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text(
+            'Profil Fotoğrafı Ekle',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -480,12 +541,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       child: Row(
         children: [
           const SizedBox(width: 16),
-          const Icon(Icons.calendar_today_rounded, color: AppColors.primaryGreen, size: 20),
+          const Icon(
+            Icons.calendar_today_rounded,
+            color: AppColors.primaryGreen,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Destek Başlangıcı',
-              style: TextStyle(color: AppColors.muted, fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           DropdownButtonHideUnderline(
@@ -494,10 +563,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               dropdownColor: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               items: supportYears
-                  .map((y) => DropdownMenuItem(
-                        value: y,
-                        child: Text(y, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-                      ))
+                  .map(
+                    (y) => DropdownMenuItem(
+                      value: y,
+                      child: Text(
+                        y,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => selectedSupportYear = v!),
             ),
@@ -521,7 +598,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           onPressed: isCompleting ? null : () => context.go('/home'),
           child: const Text(
             'Belki Daha Sonra',
-            style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.muted,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],

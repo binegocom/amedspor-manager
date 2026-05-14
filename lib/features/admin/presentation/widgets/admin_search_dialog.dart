@@ -30,9 +30,10 @@ class _AdminSearchDialogState extends State<AdminSearchDialog> {
 
     try {
       final db = FirebaseFirestore.instance;
-      
+
       // Search Users (prefix match on username)
-      final userSnap = await db.collection('users')
+      final userSnap = await db
+          .collection('users')
           .where('username', isGreaterThanOrEqualTo: query)
           .where('username', isLessThanOrEqualTo: '$query\uf8ff')
           .limit(5)
@@ -40,17 +41,21 @@ class _AdminSearchDialogState extends State<AdminSearchDialog> {
 
       // Search Matches (simple fetch for now, matching by name is harder in Firestore without full-text)
       // We'll just fetch recent matches and filter locally for this "Quick Search"
-      final matchSnap = await db.collection('matches')
+      final matchSnap = await db
+          .collection('matches')
           .orderBy('matchDate', descending: true)
           .limit(20)
           .get();
 
-      final users = userSnap.docs.map((doc) => AppUserModel.fromMap(doc.id, doc.data())).toList();
+      final users = userSnap.docs
+          .map((doc) => AppUserModel.fromMap(doc.id, doc.data()))
+          .toList();
       final matches = matchSnap.docs
           .map((doc) => MatchModel.fromFirestore(doc))
-          .where((m) => 
-            m.homeTeam.toLowerCase().contains(query.toLowerCase()) || 
-            m.awayTeam.toLowerCase().contains(query.toLowerCase())
+          .where(
+            (m) =>
+                m.homeTeam.toLowerCase().contains(query.toLowerCase()) ||
+                m.awayTeam.toLowerCase().contains(query.toLowerCase()),
           )
           .toList();
 
@@ -83,42 +88,58 @@ class _AdminSearchDialogState extends State<AdminSearchDialog> {
               decoration: InputDecoration(
                 hintText: 'Kullanıcı veya maç ara...',
                 hintStyle: const TextStyle(color: Colors.white24),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFE53935)),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFFE53935),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.03),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             if (_isLoading)
               const CircularProgressIndicator(color: Color(0xFFE53935))
-            else if (_userResults.isEmpty && _matchResults.isEmpty && _controller.text.isNotEmpty)
-              const Text('Sonuç bulunamadı', style: TextStyle(color: Colors.white38))
+            else if (_userResults.isEmpty &&
+                _matchResults.isEmpty &&
+                _controller.text.isNotEmpty)
+              const Text(
+                'Sonuç bulunamadı',
+                style: TextStyle(color: Colors.white38),
+              )
             else ...[
               if (_userResults.isNotEmpty) ...[
                 const _SearchHeader(title: 'Kullanıcılar'),
-                ..._userResults.map((user) => _SearchResultTile(
-                  title: user.username,
-                  subtitle: user.email,
-                  icon: Icons.person_rounded,
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/profile/${user.id}');
-                  },
-                )),
+                ..._userResults.map(
+                  (user) => _SearchResultTile(
+                    title: user.username,
+                    subtitle: user.email,
+                    icon: Icons.person_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/profile/${user.id}');
+                    },
+                  ),
+                ),
               ],
               if (_matchResults.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const _SearchHeader(title: 'Maçlar'),
-                ..._matchResults.map((match) => _SearchResultTile(
-                  title: '${match.homeTeam} vs ${match.awayTeam}',
-                  subtitle: '${match.matchDate.day}.${match.matchDate.month}.${match.matchDate.year}',
-                  icon: Icons.sports_soccer_rounded,
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/admin/matches'); // Or specific match edit if route exists
-                  },
-                )),
+                ..._matchResults.map(
+                  (match) => _SearchResultTile(
+                    title: '${match.homeTeam} vs ${match.awayTeam}',
+                    subtitle:
+                        '${match.matchDate.day}.${match.matchDate.month}.${match.matchDate.year}',
+                    icon: Icons.sports_soccer_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/admin/matches/edit/${match.id}');
+                    },
+                  ),
+                ),
               ],
             ],
             const SizedBox(height: 12),
@@ -139,7 +160,15 @@ class _SearchHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Row(
         children: [
-          Text(title.toUpperCase(), style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+          Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(width: 8),
           const Expanded(child: Divider(color: Colors.white10)),
         ],
@@ -154,7 +183,12 @@ class _SearchResultTile extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _SearchResultTile({required this.title, required this.subtitle, required this.icon, required this.onTap});
+  const _SearchResultTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -165,9 +199,23 @@ class _SearchResultTile extends StatelessWidget {
         backgroundColor: Colors.white.withValues(alpha: 0.05),
         child: Icon(icon, size: 18, color: Colors.white70),
       ),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white24),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(color: Colors.white38, fontSize: 12),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: 12,
+        color: Colors.white24,
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }

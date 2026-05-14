@@ -12,6 +12,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/app_user_model.dart';
+import '../../data/models/match_model.dart';
+import '../../data/models/player_model.dart';
 import '../../data/services/firebase/auth_service.dart';
 import '../../data/services/firebase/firestore_service.dart';
 import '../../data/services/firebase/storage_service.dart';
@@ -156,4 +158,16 @@ final errorReportRepositoryProvider = Provider<ErrorReportRepository>(
 
 final auditLogRepositoryProvider = Provider<AuditLogRepository>(
   (_) => AuditLogRepository(),
+);
+
+// ─── Cached Providers for Performance ───────────────────────────────────────
+
+/// Cached match list to avoid redundant Firestore reads
+final matchesCacheProvider = Provider.autoDispose<List<MatchModel>>(
+  (ref) => [],
+);
+
+/// Cached player list
+final playersCacheProvider = Provider.autoDispose<List<PlayerModel>>(
+  (ref) => [],
 );

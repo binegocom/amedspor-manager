@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 import '../../../../data/models/report_model.dart';
 import '../../../../data/repositories/report_repository.dart';
@@ -32,7 +33,7 @@ class ReportsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/settings')),
+            _Header(onBack: () => context.popOrGo('/settings')),
 
             StreamBuilder<List<ReportModel>>(
               stream: reportRepository.watchUserReports(user.uid),

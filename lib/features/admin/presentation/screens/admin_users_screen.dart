@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/app_user_model.dart';
 import '../../../../data/repositories/user_repository.dart';
+import '../../../../data/repositories/audit_log_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../widgets/admin_layout.dart';
 
@@ -88,12 +89,68 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     required AppUserModel user,
     required String role,
   }) async {
+    final currentUid = authService.currentUser?.uid;
+    final currentEmail = authService.currentUser?.email ?? 'admin@amedspor.org';
+
+    // Prevent self-downgrade
+    if (currentUid == user.id && role != 'admin') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Kendi yetkinizi düşüremezsiniz!'),
+        ),
+      );
+      return;
+    }
+
+    // Prevent root admin mutation
+    if (user.email == 'admin@amedspor.org' || user.id == '8zgCWSp7cBXuw4rS9UtdGcwFZTk2') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Sistem kök yöneticisinin (Root Admin) yetkisi değiştirilemez!'),
+        ),
+      );
+      return;
+    }
+
+    // Secondary Approval Dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Yetki Değişikliği Onayı', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '${user.username} kullanıcısının yetkisi "$role" olarak güncellenecektir. Onaylıyor musunuz?',
+          style: const TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İPTAL')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF0F6A3D)),
+            child: const Text('ONAYLA'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
     try {
       await firestoreService.users.doc(user.id).update({
         'role': role,
       });
 
-      // Update local state
+      // Secure backend audit logging
+      await AuditLogRepository().logAction(
+        adminEmail: currentEmail,
+        action: 'UPDATE_ROLE ($role)',
+        targetType: 'USER',
+        targetId: user.id,
+        platform: 'ADMIN_CONSOLE',
+      );
+
       setState(() {
         final index = _users.indexWhere((u) => u.id == user.id);
         if (index != -1) {
@@ -122,14 +179,69 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _toggleUserDisabled(AppUserModel user) async {
+    final currentUid = authService.currentUser?.uid;
+    final currentEmail = authService.currentUser?.email ?? 'admin@amedspor.org';
+
+    if (currentUid == user.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Kendi hesabınızı pasifleştiremezsiniz!'),
+        ),
+      );
+      return;
+    }
+
+    if (user.email == 'admin@amedspor.org' || user.id == '8zgCWSp7cBXuw4rS9UtdGcwFZTk2') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFE53935),
+          content: Text('Sistem kök yöneticisi pasifleştirilemez!'),
+        ),
+      );
+      return;
+    }
+
     final isDisabled = user.isDisabled;
+
+    // Secondary Approval Dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Hesap Durumu Onayı', style: TextStyle(color: Colors.white)),
+        content: Text(
+          !isDisabled
+              ? '${user.username} kullanıcısının erişimi askıya alınacaktır. Emin misiniz?'
+              : '${user.username} kullanıcısının hesabı tekrar aktif edilecektir. Emin misiniz?',
+          style: const TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İPTAL')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE53935)),
+            child: const Text('ONAYLA'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
 
     try {
       await firestoreService.users.doc(user.id).update({
         'disabled': !isDisabled,
       });
 
-      // Update local state
+      await AuditLogRepository().logAction(
+        adminEmail: currentEmail,
+        action: !isDisabled ? 'DISABLE_ACCOUNT' : 'ENABLE_ACCOUNT',
+        targetType: 'USER',
+        targetId: user.id,
+        platform: 'ADMIN_CONSOLE',
+      );
+
       setState(() {
         final index = _users.indexWhere((u) => u.id == user.id);
         if (index != -1) {
@@ -165,11 +277,39 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Widget build(BuildContext context) {
     return AdminLayout(
       activeRoute: AdminUsersScreen.routePath,
-      title: 'Kullanıcı Yönetimi',
-      subtitle: 'Kullanıcıları görüntüle, rol değiştir ve hesap durumunu yönet.',
+      title: 'Kullanıcı Yönetimi & RBAC',
+      subtitle: 'Rol tabanlı erişim matrisi, yetki yükseltme ve hesap durumunu denetle.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'RBAC Yetki Matrisi & Kurallar',
+                    style: TextStyle(color: Color(0xFFE53935), fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '• Admin: Custom Claims (admin=true) gerektirir. Tam denetim, ayar düzenleme ve rol atama yetkisine sahiptir.\n'
+                    '• Moderator: İçerik silme, küfür/rapor denetimi ve sohbet akışını kontrol eder. Yetki atayamaz.\n'
+                    '• Güvenlik Kalkanı: Kök yönetici (Root Admin) silinemez veya yetkisi düşürülemez. Kendi yetkinizi düşüremezsiniz.',
+                    style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: SizedBox(

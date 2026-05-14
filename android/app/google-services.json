@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:346583132476:android:d7efb223a146adc4e41639",
+        "mobilesdk_app_id": "1:346583132476:android:c5667c4cf5db9aa9e41639",
         "android_client_info": {
-          "package_name": "com.example.amedspor_app"
+          "package_name": "com.amedspor.manager"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "346583132476-61vaifog22g5sc1b2o0k1h7mqnr3u6n7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDhDp4hauleQAPk_O9uxM8NJHvnN0IKv5A"
@@ -20,7 +25,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "346583132476-61vaifog22g5sc1b2o0k1h7mqnr3u6n7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "346583132476-4nesf78d4at7t8psmdn7s69oj6bbne73.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.amedsporApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:346583132476:android:d7efb223a146adc4e41639",
+        "android_client_info": {
+          "package_name": "com.example.amedspor_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "346583132476-61vaifog22g5sc1b2o0k1h7mqnr3u6n7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhDp4hauleQAPk_O9uxM8NJHvnN0IKv5A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "346583132476-61vaifog22g5sc1b2o0k1h7mqnr3u6n7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "346583132476-4nesf78d4at7t8psmdn7s69oj6bbne73.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.amedsporApp"
+              }
+            }
+          ]
         }
       }
     }

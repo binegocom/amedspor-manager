@@ -9,6 +9,7 @@ import '../../../../shared/components/app_text_field.dart';
 import '../../../../data/models/player_model.dart';
 import '../../../../data/repositories/player_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
+import '../../../../data/services/reset_service.dart';
 import '../widgets/admin_layout.dart';
 
 class AdminPlayersScreen extends StatefulWidget {
@@ -26,8 +27,18 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
   String selectedFilter = 'all';
 
   List<PlayerModel> _filterPlayers(List<PlayerModel> players) {
-    if (selectedFilter == 'all') return players;
-    return players.where((player) => player.position == selectedFilter).toList();
+    // Aynı isimdeki tekrarlanan oyuncuları filtrele (sadece benzersiz isimleri tut)
+    final seen = <String>{};
+    final uniquePlayers = <PlayerModel>[];
+    for (final p in players) {
+      if (!seen.contains(p.name)) {
+        seen.add(p.name);
+        uniquePlayers.add(p);
+      }
+    }
+
+    if (selectedFilter == 'all') return uniquePlayers;
+    return uniquePlayers.where((player) => player.position == selectedFilter).toList();
   }
 
   Future<void> _openPlayerDialog({PlayerModel? player}) async {
@@ -141,11 +152,12 @@ class _AdminPlayersScreenState extends State<AdminPlayersScreen> {
           onTap: () async {
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
+              await ResetService().wipePlayersOnly();
               await seedService.seedAmedspor2026Squad();
               scaffoldMessenger.showSnackBar(
                 const SnackBar(
                   backgroundColor: AppColors.primaryGreen,
-                  content: Text('2025-2026 Sezonu Kadrosu Başarıyla Yüklendi!'),
+                  content: Text('Eski kayıtlar temizlendi ve 2025-2026 Kadrosu Yüklendi!'),
                 ),
               );
             } catch (e) {

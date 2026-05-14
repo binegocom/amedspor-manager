@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import '../../core/router/navigation_helpers.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_colors.dart';
 
@@ -26,24 +26,64 @@ class PremiumHeader extends StatelessWidget {
             if (showBackButton) ...[
               IconButton(
                 onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/home');
-                  }
+                  context.popOrGo('/home');
                 },
-                icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: AppColors.white,
+                  size: 20,
+                ),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.card,
                   padding: const EdgeInsets.all(12),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
             ],
+            // Official Amedspor PNG Logo Premium Glow Kapsülü
+            Container(
+              width: 38,
+              height: 38,
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surface,
+                border: Border.all(
+                  color: AppColors.primaryRed.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryRed.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.shield_rounded,
+                  color: AppColors.gold,
+                  size: 20,
+                ),
+              ),
+            ),
             Expanded(
               child: Text(
                 title,
-                style: AppTextStyles.h2,
+                style: AppTextStyles.h2.copyWith(
+                  letterSpacing: -0.8,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
               ),
             ),
             if (actions != null) ...actions!,

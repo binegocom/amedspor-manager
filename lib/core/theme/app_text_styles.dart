@@ -40,6 +40,13 @@ class AppTextStyles {
 
   static const TextStyle body = bodyMedium;
 
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    color: AppColors.muted,
+    height: 1.4,
+  );
+
   static const TextStyle label = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w800,

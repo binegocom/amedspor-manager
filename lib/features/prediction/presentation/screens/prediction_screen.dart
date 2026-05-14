@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/prediction_model.dart';
 import '../../../../data/repositories/prediction_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
 
 class PredictionScreen extends StatefulWidget {
   final String matchId;
@@ -157,7 +158,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
       ),
     );
 
-    context.go('/predictions/me');
+    context.push('/predictions/me');
   }
 
   void _increaseAmed() {
@@ -185,7 +186,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/home')),
+            _Header(onBack: () => context.popOrGo('/home')),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),

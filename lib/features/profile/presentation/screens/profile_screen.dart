@@ -1,9 +1,12 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 import '../../../../shared/components/premium_card.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../data/models/app_user_model.dart';
 import '../../../../data/models/lineup_model.dart';
@@ -15,6 +18,8 @@ import '../../../../data/repositories/prediction_repository.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 
+import '../../../../shared/components/login_required_view.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -23,22 +28,18 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = authService.currentUser;
+    if (user == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.darkBackground,
+        bottomNavigationBar: AppBottomNav(currentIndex: 4),
+        body: LoginRequiredView(),
+      );
+    }
+
     final userRepository = UserRepository();
     final postRepository = PostRepository();
     final lineupRepository = LineupRepository();
     final predictionRepository = PredictionRepository();
-
-    if (user == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0E0E0E),
-        body: Center(
-          child: ElevatedButton(
-            onPressed: () => context.go('/login'),
-            child: const Text('Giriş Yap'),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
@@ -50,8 +51,8 @@ class ProfileScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Header(
-                onBack: () => context.go('/home'),
-                onSettings: () => context.go('/settings'),
+                onBack: () => context.popOrGo('/home'),
+                onSettings: () => context.push('/settings'),
               ),
 
               const SizedBox(height: 24),
@@ -69,79 +70,79 @@ class ProfileScreen extends StatelessWidget {
                     );
                   }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ProfileHero(user: appUser),
-                    const SizedBox(height: 18),
-                    _LevelProgressBar(user: appUser),
-                    const SizedBox(height: 18),
-                    _StatsGrid(
-                      userId: user.uid,
-                      postRepository: postRepository,
-                      lineupRepository: lineupRepository,
-                      predictionRepository: predictionRepository,
-                    ),
-                    const SizedBox(height: 18),
-                    const _SectionTitle(title: 'Oyunlaştırma'),
-                    const SizedBox(height: 12),
-                    _MenuTile(
-                      icon: Icons.assignment_rounded,
-                      title: 'Görevler',
-                      subtitle: 'Günlük, haftalık ve sezonluk görevlerin',
-                      onTap: () => context.go('/missions'),
-                    ),
-                    _MenuTile(
-                      icon: Icons.shield_rounded,
-                      title: 'Rozetlerim',
-                      subtitle: 'Kazandığın tüm başarı nişanları',
-                      onTap: () => context.go('/badges'),
-                    ),
-                    const SizedBox(height: 18),
-                    const _SectionTitle(title: 'Hesabım'),
-                    const SizedBox(height: 12),
-                    _MenuTile(
-                      icon: Icons.sports_soccer_rounded,
-                      title: 'Benim Kadrolarım',
-                      subtitle: 'Kaydettiğin ve paylaştığın kadrolar',
-                      onTap: () => context.go('/lineups/me'),
-                    ),
-                    _MenuTile(
-                      icon: Icons.emoji_events_rounded,
-                      title: 'Tahminlerim',
-                      subtitle: 'Maç tahmin geçmişin',
-                      onTap: () => context.go('/predictions/me'),
-                    ),
-                    _MenuTile(
-                      icon: Icons.leaderboard_rounded,
-                      title: 'Liderlik Tablosu',
-                      subtitle: 'Haftalık ve genel sıralama',
-                      onTap: () => context.go('/leaderboard'),
-                    ),
-                    if (appUser?.role == 'admin') ...[
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ProfileHero(user: appUser),
+                      const SizedBox(height: 18),
+                      _LevelProgressBar(user: appUser),
+                      const SizedBox(height: 18),
+                      _StatsGrid(
+                        userId: user.uid,
+                        postRepository: postRepository,
+                        lineupRepository: lineupRepository,
+                        predictionRepository: predictionRepository,
+                      ),
+                      const SizedBox(height: 18),
+                      const _SectionTitle(title: 'Oyunlaştırma'),
+                      const SizedBox(height: 12),
                       _MenuTile(
-                        icon: Icons.admin_panel_settings_rounded,
-                        title: 'Admin Paneli',
-                        subtitle: 'Sistem yönetimi ve içerik kontrolleri',
-                        onTap: () => context.go('/admin/dashboard'),
+                        icon: Icons.assignment_rounded,
+                        title: 'Görevler',
+                        subtitle: 'Günlük, haftalık ve sezonluk görevlerin',
+                        onTap: () => context.push('/missions'),
+                      ),
+                      _MenuTile(
+                        icon: Icons.shield_rounded,
+                        title: 'Rozetlerim',
+                        subtitle: 'Kazandığın tüm başarı nişanları',
+                        onTap: () => context.push('/badges'),
+                      ),
+                      const SizedBox(height: 18),
+                      const _SectionTitle(title: 'Hesabım'),
+                      const SizedBox(height: 12),
+                      _MenuTile(
+                        icon: Icons.sports_soccer_rounded,
+                        title: 'Benim Kadrolarım',
+                        subtitle: 'Kaydettiğin ve paylaştığın kadrolar',
+                        onTap: () => context.push('/lineups/me'),
+                      ),
+                      _MenuTile(
+                        icon: Icons.emoji_events_rounded,
+                        title: 'Tahminlerim',
+                        subtitle: 'Maç tahmin geçmişin',
+                        onTap: () => context.push('/predictions/me'),
+                      ),
+                      _MenuTile(
+                        icon: Icons.leaderboard_rounded,
+                        title: 'Liderlik Tablosu',
+                        subtitle: 'Haftalık ve genel sıralama',
+                        onTap: () => context.push('/leaderboard'),
+                      ),
+                      if (appUser?.role == 'admin') ...[
+                        _MenuTile(
+                          icon: Icons.admin_panel_settings_rounded,
+                          title: 'Admin Paneli',
+                          subtitle: 'Sistem yönetimi ve içerik kontrolleri',
+                          onTap: () => context.go('/admin/dashboard'),
+                        ),
+                      ],
+                      _MenuTile(
+                        icon: Icons.notifications_rounded,
+                        title: 'Bildirimler',
+                        subtitle: 'Aktiviteler ve maç hatırlatmaları',
+                        onTap: () => context.push('/notifications'),
                       ),
                     ],
-                    _MenuTile(
-                      icon: Icons.notifications_rounded,
-                      title: 'Bildirimler',
-                      subtitle: 'Aktiviteler ve maç hatırlatmaları',
-                      onTap: () => context.go('/notifications'),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _Header extends StatelessWidget {
@@ -235,12 +236,19 @@ class _ProfileHero extends StatelessWidget {
                           width: 92,
                           height: 92,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(Icons.person_rounded, color: Colors.white, size: 52),
+                          errorWidget: (_, _, _) => const Icon(
+                            Icons.person_rounded,
+                            color: Colors.white,
+                            size: 52,
+                          ),
                         ),
                       ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE53935),
                   borderRadius: BorderRadius.circular(12),
@@ -309,12 +317,12 @@ class _LevelProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentLevel = user?.level ?? 1;
     final currentXp = user?.xp ?? 0;
-    
+
     // Simple level formula: Level = sqrt(xp/100) + 1
     // Reverse: XP for Level L = (L-1)^2 * 100
     final xpForCurrentLevel = math.pow(currentLevel - 1, 2) * 100;
     final xpForNextLevel = math.pow(currentLevel, 2) * 100;
-    
+
     final progressXp = currentXp - xpForCurrentLevel;
     final requiredXp = xpForNextLevel - xpForCurrentLevel;
     final percent = (progressXp / requiredXp).clamp(0.0, 1.0);
@@ -352,7 +360,9 @@ class _LevelProgressBar extends StatelessWidget {
               value: percent,
               minHeight: 10,
               backgroundColor: Colors.white.withValues(alpha: 0.05),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F6A3D)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF0F6A3D),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -361,7 +371,11 @@ class _LevelProgressBar extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${currentXp.toInt()} XP',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -371,7 +385,10 @@ class _LevelProgressBar extends StatelessWidget {
                   textAlign: TextAlign.end,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 11),
+                  style: const TextStyle(
+                    color: Color(0xFFB3B3B3),
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ],
@@ -426,7 +443,7 @@ class _ProfileMiniStat extends StatelessWidget {
   }
 }
 
-class _StatsGrid extends StatelessWidget {
+class _StatsGrid extends StatefulWidget {
   final String userId;
   final PostRepository postRepository;
   final LineupRepository lineupRepository;
@@ -440,48 +457,75 @@ class _StatsGrid extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<PredictionModel>>(
-      stream: predictionRepository.watchUserPredictions(userId),
-      builder: (context, predictionSnapshot) {
-        return StreamBuilder<List<LineupModel>>(
-          stream: lineupRepository.watchUserLineups(userId),
-          builder: (context, lineupSnapshot) {
-            return StreamBuilder<List<PostModel>>(
-              stream: postRepository.watchUserPosts(userId),
-              builder: (context, postSnapshot) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.check_circle_rounded,
-                        title: 'Tahmin',
-                        value: '${predictionSnapshot.data?.length ?? 0}',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.groups_rounded,
-                        title: 'Kadro',
-                        value: '${lineupSnapshot.data?.length ?? 0}',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.article_rounded,
-                        title: 'Post',
-                        value: '${postSnapshot.data?.length ?? 0}',
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
+  State<_StatsGrid> createState() => _StatsGridState();
+}
+
+class _StatsGridState extends State<_StatsGrid> {
+  List<PredictionModel>? _predictions;
+  List<LineupModel>? _lineups;
+  List<PostModel>? _posts;
+
+  late final StreamSubscription<List<PredictionModel>> _predictionSub;
+  late final StreamSubscription<List<LineupModel>> _lineupSub;
+  late final StreamSubscription<List<PostModel>> _postSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Subscribe to all three streams independently
+    _predictionSub = widget.predictionRepository
+        .watchUserPredictions(widget.userId)
+        .listen((data) {
+          if (mounted) setState(() => _predictions = data);
+        });
+    _lineupSub = widget.lineupRepository.watchUserLineups(widget.userId).listen(
+      (data) {
+        if (mounted) setState(() => _lineups = data);
       },
+    );
+    _postSub = widget.postRepository.watchUserPosts(widget.userId).listen((
+      data,
+    ) {
+      if (mounted) setState(() => _posts = data);
+    });
+  }
+
+  @override
+  void dispose() {
+    _predictionSub.cancel();
+    _lineupSub.cancel();
+    _postSub.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            icon: Icons.check_circle_rounded,
+            title: 'Tahmin',
+            value: '${_predictions?.length ?? 0}',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.groups_rounded,
+            title: 'Kadro',
+            value: '${_lineups?.length ?? 0}',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.article_rounded,
+            title: 'Post',
+            value: '${_posts?.length ?? 0}',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -501,42 +545,35 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return PremiumCard(
       backgroundColor: const Color(0xFF1A1A1A),
-      padding: const EdgeInsets.all(12),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
-            radius: 16,
+            radius: 14,
             backgroundColor: const Color(0xFF0F6A3D),
-            child: Icon(icon, color: Colors.white, size: 16),
+            child: Icon(icon, color: Colors.white, size: 14),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFB3B3B3),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFFB3B3B3),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -605,4 +642,3 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
-

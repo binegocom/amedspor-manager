@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -39,13 +39,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     try {
-      final onboardingCompleted = await appStateService.isOnboardingCompleted();
-
-      if (!onboardingCompleted) {
-        if (!mounted) return;
-        context.go('/onboarding');
-        return;
-      }
+      // Onboarding tamamen kaldırıldı, sistemde tamamlandı olarak işaretle.
+      await appStateService.setOnboardingCompleted();
 
       final user = authService.currentUser;
 

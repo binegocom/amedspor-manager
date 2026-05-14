@@ -3,8 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../data/models/report_model.dart';
 import '../../../../data/repositories/report_repository.dart';
+import '../../../../data/repositories/audit_log_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
-import 'package:amedspor_app/features/admin/presentation/widgets/admin_layout.dart';
+import '../widgets/admin_layout.dart';
 
 class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
@@ -19,7 +20,6 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   final reportRepository = ReportRepository();
 
   String selectedFilter = 'reviewing';
-
 
   List<ReportModel> _filterReports(List<ReportModel> reports) {
     if (selectedFilter == 'all') return reports;
@@ -139,7 +139,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     // 1. Delete from posts comments
     final posts = await firestoreService.posts.get();
     for (final post in posts.docs) {
-      final commentDoc = await post.reference.collection('comments').doc(commentId).get();
+      final commentDoc = await post.reference
+          .collection('comments')
+          .doc(commentId)
+          .get();
       if (commentDoc.exists) {
         await commentDoc.reference.delete();
       }
@@ -148,10 +151,233 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     // 2. Delete from lineups comments
     final lineups = await firestoreService.lineups.get();
     for (final lineup in lineups.docs) {
-      final commentDoc = await lineup.reference.collection('comments').doc(commentId).get();
+      final commentDoc = await lineup.reference
+          .collection('comments')
+          .doc(commentId)
+          .get();
       if (commentDoc.exists) {
         await commentDoc.reference.delete();
       }
+    }
+  }
+
+  Future<void> _showStrikeDialog(ReportModel report) async {
+    String reasonTemplate = 'Spam & Tekrarlı İçerik';
+    final customReasonController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF161616),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: const BorderSide(color: Colors.white10),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.gavel_rounded, color: Color(0xFFFFB300)),
+                SizedBox(width: 12),
+                Text(
+                  'İhlal Puanı (Strike) Uygula',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Kullanıcının siciline +1 İhlal Puanı eklenecek ve kademeli disiplin kuralları işletilecektir.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Gerekçe Şablonu:',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: reasonTemplate,
+                    dropdownColor: const Color(0xFF222222),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Spam & Tekrarlı İçerik',
+                        child: Text('Spam & Tekrarlı İçerik'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Küfür, Hakaret & Zorbalık',
+                        child: Text('Küfür, Hakaret & Zorbalık'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Halkı Kışkırtma & Nefret Söylemi',
+                        child: Text('Halkı Kışkırtma & Nefret Söylemi'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() => reasonTemplate = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: customReasonController,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Özel Not (Opsiyonel)',
+                      labelStyle: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('İPTAL'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _executeStrike(
+                    report,
+                    reasonTemplate,
+                    customReasonController.text.trim(),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFB300),
+                  foregroundColor: Colors.black,
+                ),
+                icon: const Icon(Icons.bolt_rounded),
+                label: const Text(
+                  'STRIKE UYGULA',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _executeStrike(
+    ReportModel report,
+    String reason,
+    String customNote,
+  ) async {
+    try {
+      String targetUid = report.targetId;
+
+      // Detect UID if target is post or lineup
+      if (report.targetType == 'post') {
+        final doc = await firestoreService.posts.doc(report.targetId).get();
+        if (doc.exists && doc.data() != null) {
+          targetUid = doc.data()!['userId'] ?? report.targetId;
+        }
+      } else if (report.targetType == 'lineup') {
+        final doc = await firestoreService.lineups.doc(report.targetId).get();
+        if (doc.exists && doc.data() != null) {
+          targetUid = doc.data()!['userId'] ?? report.targetId;
+        }
+      }
+
+      // Read user document
+      final userDoc = await firestoreService.users.doc(targetUid).get();
+      if (!userDoc.exists || userDoc.data() == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hedef kullanıcı bulunamadı.')),
+        );
+        return;
+      }
+
+      final userData = userDoc.data()!;
+      int currentStrikes = (userData['strikeCount'] as int?) ?? 0;
+      List<dynamic> activeStrikes =
+          (userData['activeStrikes'] as List<dynamic>?) ?? [];
+
+      final newStrikeCount = currentStrikes + 1;
+      final fullReason = customNote.isEmpty ? reason : '$reason - $customNote';
+      activeStrikes.add('${DateTime.now().toIso8601String()}|$fullReason');
+
+      Map<String, dynamic> updates = {
+        'strikeCount': newStrikeCount,
+        'activeStrikes': activeStrikes,
+      };
+
+      // Enforce discipline thresholds
+      String penaltyApplied = 'Uyarı Gönderildi';
+      if (newStrikeCount == 2) {
+        updates['isMuted'] = true;
+        updates['muteExpiresAt'] = DateTime.now()
+            .add(const Duration(hours: 24))
+            .toIso8601String();
+        penaltyApplied = '24 Saat Yazma Engeli (Mute)';
+      } else if (newStrikeCount >= 3) {
+        updates['disabled'] = true;
+        penaltyApplied = 'Hesap Kalıcı Olarak Askıya Alındı';
+      }
+
+      await firestoreService.users.doc(targetUid).update(updates);
+
+      // Resolve report automatically
+      await firestoreService.reports.doc(report.id).update({
+        'status': 'resolved',
+      });
+
+      // Enforce Zero-Trust mandatory backend audit logging
+      final currentEmail =
+          authService.currentUser?.email ?? 'admin@amedspor.org';
+      await AuditLogRepository().logAction(
+        adminEmail: currentEmail,
+        action: 'APPLY_STRIKE_$newStrikeCount ($penaltyApplied)',
+        targetType: 'USER_MODERATION',
+        targetId: targetUid,
+        platform: 'ADMIN_CONSOLE',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFFFB300),
+          content: Text('Strike uygulandı! Durum: $penaltyApplied'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFE53935),
+          content: Text('Strike hatası: $e'),
+        ),
+      );
     }
   }
 
@@ -219,15 +445,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFFE53935),
-                    ),
+                    child: CircularProgressIndicator(color: Color(0xFFE53935)),
                   );
                 }
 
-                final reports = _filterReports(
-                  snapshot.data ?? [],
-                );
+                final reports = _filterReports(snapshot.data ?? []);
 
                 if (reports.isEmpty) {
                   return const Center(
@@ -255,28 +477,19 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                       statusText: _statusText(report.status),
                       onOpenTarget: () {
                         if (report.targetType == 'post') {
-                          context.go(
-                            '/post/${report.targetId}',
-                          );
+                          context.go('/post/${report.targetId}');
                         } else if (report.targetType == 'user') {
-                          context.go(
-                            '/profile/${report.targetId}',
-                          );
+                          context.go('/profile/${report.targetId}');
                         }
                       },
                       onResolve: () {
-                        _updateReportStatus(
-                          report: report,
-                          status: 'resolved',
-                        );
+                        _updateReportStatus(report: report, status: 'resolved');
                       },
                       onReject: () {
-                        _updateReportStatus(
-                          report: report,
-                          status: 'rejected',
-                        );
+                        _updateReportStatus(report: report, status: 'rejected');
                       },
                       onDeleteTarget: () => _deleteTarget(report),
+                      onStrike: () => _showStrikeDialog(report),
                     );
                   },
                 );
@@ -297,6 +510,7 @@ class _AdminReportCard extends StatelessWidget {
   final VoidCallback onResolve;
   final VoidCallback onReject;
   final VoidCallback onDeleteTarget;
+  final VoidCallback onStrike;
 
   const _AdminReportCard({
     required this.report,
@@ -306,6 +520,7 @@ class _AdminReportCard extends StatelessWidget {
     required this.onResolve,
     required this.onReject,
     required this.onDeleteTarget,
+    required this.onStrike,
   });
 
   @override
@@ -431,6 +646,19 @@ class _AdminReportCard extends StatelessWidget {
                 icon: const Icon(Icons.delete_rounded, size: 18),
                 label: const Text('İşlem'),
               ),
+              ElevatedButton.icon(
+                onPressed: onStrike,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFB300),
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.bolt_rounded, size: 18),
+                label: const Text(
+                  'STRIKE',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
             ],
           );
 
@@ -530,4 +758,3 @@ class _MiniBadge extends StatelessWidget {
     );
   }
 }
-

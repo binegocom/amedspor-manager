@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
@@ -10,7 +11,7 @@ import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/app_button.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -31,10 +32,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String selectedCategory = 'Maç Yorumu';
   bool isPublishing = false;
   XFile? selectedImage;
+  Uint8List? selectedImageBytes;
   final picker = ImagePicker();
 
   final List<String> categories = const [
     'Maç Yorumu',
+    'Maç Günü',
     'Kadro',
     'Transfer',
     'Tribün',
@@ -68,9 +71,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     try {
       if (selectedImage != null) {
-        imageUrl = await storageService.uploadPostImage(
+        imageUrl = await storageService.uploadPostImageData(
+          userId: user.uid,
           postId: postId,
-          file: File(selectedImage!.path),
+          bytes: selectedImageBytes ?? await selectedImage!.readAsBytes(),
         );
       }
 
@@ -124,9 +128,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickImage() async {
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
     if (image != null) {
-      setState(() => selectedImage = image);
+      final bytes = await image.readAsBytes();
+      setState(() {
+        selectedImage = image;
+        selectedImageBytes = bytes;
+      });
     }
   }
 
@@ -140,7 +151,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(onBack: () => context.go('/feed')),
+              _Header(onBack: () => context.popOrGo('/feed')),
 
               const SizedBox(height: 24),
 
@@ -204,9 +215,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             child: Text(
                               category,
                               style: TextStyle(
-                                color: active
-                                    ? Colors.white
-                                    : AppColors.muted,
+                                color: active ? Colors.white : AppColors.muted,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -240,7 +249,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   labelStyle: const TextStyle(color: AppColors.muted),
                   prefixIcon: const Padding(
                     padding: EdgeInsets.only(bottom: 80),
-                    child: Icon(Icons.edit_rounded, color: AppColors.primaryGreen),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.primaryGreen,
+                    ),
                   ),
                   filled: true,
                   fillColor: AppColors.surface,
@@ -275,17 +287,24 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     child: selectedImage != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(22),
-                            child: Image.file(
-                              File(selectedImage!.path),
+                            child: Image.memory(
+                              selectedImageBytes!,
                               fit: BoxFit.cover,
                             ),
                           )
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Icon(Icons.add_photo_alternate_rounded, color: AppColors.muted, size: 40),
+                              Icon(
+                                Icons.add_photo_alternate_rounded,
+                                color: AppColors.muted,
+                                size: 40,
+                              ),
                               SizedBox(height: 8),
-                              Text('Fotoğraf Seç', style: TextStyle(color: AppColors.muted)),
+                              Text(
+                                'Fotoğraf Seç',
+                                style: TextStyle(color: AppColors.muted),
+                              ),
                             ],
                           ),
                   ),

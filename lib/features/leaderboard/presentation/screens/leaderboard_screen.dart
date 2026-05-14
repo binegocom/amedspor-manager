@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
-import '../../../../data/models/app_user_model.dart';
-import '../../../../data/repositories/user_repository.dart';
+import '../../../../data/models/leaderboard_model.dart';
+import '../../../../data/repositories/leaderboard_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 
-class LeaderboardScreen extends StatefulWidget {
+class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
 
   static const String routePath = '/leaderboard';
 
   @override
-  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+  ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  String selectedTab = 'Haftalık';
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
+  int selectedLeagueLevel = 1;
 
-  final List<String> tabs = const ['Haftalık', 'Aylık', 'Genel'];
+  final List<Map<String, dynamic>> tabs = const [
+    {'label': 'Süper Lig', 'level': 1},
+    {'label': '1. Lig', 'level': 2},
+    {'label': 'Akademi Kümesi', 'level': 3},
+  ];
 
   Color _rankColor(int rank) {
     if (rank == 1) return const Color(0xFFFFB300);
@@ -28,65 +34,49 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userRepository = UserRepository();
     final currentUser = authService.currentUser;
+    final leaderboardAsync = ref.watch(leaderboardStreamProvider(selectedLeagueLevel));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E0E0E),
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/profile')),
+            _Header(onBack: () => context.popOrGo('/profile')),
 
             SizedBox(
               height: 54,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 scrollDirection: Axis.horizontal,
                 itemCount: tabs.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
-                  final tab = tabs[index];
+                  final tabLabel = tabs[index]['label'] as String;
+                  final tabLevel = tabs[index]['level'] as int;
 
                   return _TabChip(
-                    title: tab,
-                    active: selectedTab == tab,
-                    onTap: () => setState(() => selectedTab = tab),
+                    title: tabLabel,
+                    active: selectedLeagueLevel == tabLevel,
+                    onTap: () => setState(() => selectedLeagueLevel = tabLevel),
                   );
                 },
               ),
             ),
 
             Expanded(
-              child: StreamBuilder<List<AppUserModel>>(
-                stream: userRepository.watchLeaderboard(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFE53935),
-                      ),
-                    );
-                  }
-
-                  final users = snapshot.data ?? [];
-
+              child: leaderboardAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFE53935))),
+                error: (err, stack) => Center(child: Text('Hata: $err', style: const TextStyle(color: Color(0xFFE53935)))),
+                data: (users) {
                   if (users.isEmpty) {
                     return const Center(
                       child: Text(
-                        'Henüz sıralama verisi yok.',
-                        style: TextStyle(
-                          color: Color(0xFFB3B3B3),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        'Bu ligde henüz veri yok.',
+                        style: TextStyle(color: Color(0xFFB3B3B3), fontWeight: FontWeight.w600),
                       ),
                     );
                   }
-
-                  // Firestore already returns sorted by points via watchLeaderboard()
 
                   final topThree = users.take(3).toList();
                   final rest = users.skip(3).toList();
@@ -99,11 +89,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           users: topThree,
                           rankColor: _rankColor,
                           onUserTap: (user) {
-                            if (currentUser != null &&
-                                user.id == currentUser.uid) {
+                            if (currentUser != null && user.userId == currentUser.uid) {
                               context.go('/profile');
                             } else {
-                              context.go('/profile/${user.id}');
+                              context.push('/profile/${user.userId}');
                             }
                           },
                         ),
@@ -111,12 +100,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       const SizedBox(height: 22),
 
                       const Text(
-                        'Tüm Taraftarlar',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
+                        'Tüm Menajerler',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
                       ),
 
                       const SizedBox(height: 12),
@@ -130,14 +115,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           user: user,
                           rank: rank,
                           color: _rankColor(rank),
-                          isMe:
-                              currentUser != null && user.id == currentUser.uid,
+                          isMe: currentUser != null && user.userId == currentUser.uid,
                           onTap: () {
-                            if (currentUser != null &&
-                                user.id == currentUser.uid) {
+                            if (currentUser != null && user.userId == currentUser.uid) {
                               context.go('/profile');
                             } else {
-                              context.go('/profile/${user.id}');
+                              context.push('/profile/${user.userId}');
                             }
                           },
                         );
@@ -172,7 +155,7 @@ class _Header extends StatelessWidget {
           const Icon(Icons.leaderboard_rounded, color: Color(0xFFE53935)),
           const SizedBox(width: 10),
           const Text(
-            'Liderlik Tablosu',
+            'Elo Ligi',
             style: TextStyle(
               color: Colors.white,
               fontSize: 21,
@@ -224,9 +207,9 @@ class _TabChip extends StatelessWidget {
 }
 
 class _PodiumCard extends StatelessWidget {
-  final List<AppUserModel> users;
+  final List<LeaderboardModel> users;
   final Color Function(int rank) rankColor;
-  final ValueChanged<AppUserModel> onUserTap;
+  final ValueChanged<LeaderboardModel> onUserTap;
 
   const _PodiumCard({
     required this.users,
@@ -254,13 +237,15 @@ class _PodiumCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: show2 ? _PodiumUser(
-              user: users[1],
-              rank: 2,
-              height: 112,
-              color: rankColor(2),
-              onTap: () => onUserTap(users[1]),
-            ) : const SizedBox(),
+            child: show2
+                ? _PodiumUser(
+                    user: users[1],
+                    rank: 2,
+                    height: 112,
+                    color: rankColor(2),
+                    onTap: () => onUserTap(users[1]),
+                  )
+                : const SizedBox(),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -274,13 +259,15 @@ class _PodiumCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: show3 ? _PodiumUser(
-              user: users[2],
-              rank: 3,
-              height: 96,
-              color: rankColor(3),
-              onTap: () => onUserTap(users[2]),
-            ) : const SizedBox(),
+            child: show3
+                ? _PodiumUser(
+                    user: users[2],
+                    rank: 3,
+                    height: 96,
+                    color: rankColor(3),
+                    onTap: () => onUserTap(users[2]),
+                  )
+                : const SizedBox(),
           ),
         ],
       ),
@@ -289,7 +276,7 @@ class _PodiumCard extends StatelessWidget {
 }
 
 class _PodiumUser extends StatelessWidget {
-  final AppUserModel user;
+  final LeaderboardModel user;
   final int rank;
   final double height;
   final Color color;
@@ -338,7 +325,7 @@ class _PodiumUser extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${user.xp.toInt()} XP',
+            '${user.eloScore} ELO',
             style: const TextStyle(
               color: Color(0xFFB3B3B3),
               fontSize: 11,
@@ -367,7 +354,7 @@ class _PodiumUser extends StatelessWidget {
 }
 
 class _LeaderTile extends StatelessWidget {
-  final AppUserModel user;
+  final LeaderboardModel user;
   final int rank;
   final Color color;
   final bool isMe;
@@ -415,24 +402,6 @@ class _LeaderTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE53935),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'L${user.level}',
-                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(width: 14),
@@ -449,17 +418,25 @@ class _LeaderTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    user.levelTitle,
+                    user.leagueName,
                     style: const TextStyle(
                       color: Color(0xFFB3B3B3),
                       fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'G: ${user.wins} | B: ${user.draws} | M: ${user.losses}',
+                    style: const TextStyle(
+                      color: Color(0xFF888888),
+                      fontSize: 10,
                     ),
                   ),
                 ],
               ),
             ),
             Text(
-              '${user.xp.toInt()}',
+              '${user.eloScore}',
               style: const TextStyle(
                 color: Color(0xFFE53935),
                 fontWeight: FontWeight.w900,
@@ -468,7 +445,7 @@ class _LeaderTile extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             const Text(
-              'XP',
+              'ELO',
               style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12),
             ),
           ],

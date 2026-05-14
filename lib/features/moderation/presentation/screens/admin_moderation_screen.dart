@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 import '../../../../data/models/report_model.dart';
 import '../../../../data/repositories/report_repository.dart';
@@ -114,7 +114,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onBack: () => context.go('/settings')),
+            _Header(onBack: () => context.popOrGo('/settings')),
 
             SizedBox(
               height: 54,

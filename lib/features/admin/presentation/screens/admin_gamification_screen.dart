@@ -16,10 +16,12 @@ class AdminGamificationScreen extends StatefulWidget {
   static const String routePath = '/admin/gamification';
 
   @override
-  State<AdminGamificationScreen> createState() => _AdminGamificationScreenState();
+  State<AdminGamificationScreen> createState() =>
+      _AdminGamificationScreenState();
 }
 
-class _AdminGamificationScreenState extends State<AdminGamificationScreen> with SingleTickerProviderStateMixin {
+class _AdminGamificationScreenState extends State<AdminGamificationScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final repo = GamificationRepository();
   final uuid = const Uuid();
@@ -42,34 +44,120 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
     final xpController = TextEditingController();
     final pointsController = TextEditingController();
     final countController = TextEditingController();
+    final boosterController = TextEditingController(text: '0.0');
     String category = 'general';
     String requiredEvent = 'daily_login';
+    String tier = 'bronze';
+
+    int colorForTier(String t) {
+      switch (t) {
+        case 'bronze':
+          return 0xFFCD7F32;
+        case 'silver':
+          return 0xFFC0C0C0;
+        case 'gold':
+          return 0xFFFFD700;
+        case 'platinum':
+          return 0xFFE5E4E2;
+        case 'diamond':
+          return 0xFFB9F2FF;
+        default:
+          return 0xFFCD7F32;
+      }
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Yeni Rozet Oluştur', style: AppTextStyles.h2),
+                const Text(
+                  'Yeni Premium Rozet Oluştur',
+                  style: AppTextStyles.h2,
+                ),
                 const SizedBox(height: 24),
                 TextField(
                   controller: titleController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Başlık', labelStyle: TextStyle(color: AppColors.muted)),
+                  decoration: const InputDecoration(
+                    labelText: 'Başlık',
+                    labelStyle: TextStyle(color: AppColors.muted),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: descController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Açıklama', labelStyle: TextStyle(color: AppColors.muted)),
+                  decoration: const InputDecoration(
+                    labelText: 'Açıklama',
+                    labelStyle: TextStyle(color: AppColors.muted),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: tier,
+                        dropdownColor: AppColors.card,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Kademe (Tier)',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'bronze',
+                            child: Text('Bronz'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'silver',
+                            child: Text('Gümüş'),
+                          ),
+                          DropdownMenuItem(value: 'gold', child: Text('Altın')),
+                          DropdownMenuItem(
+                            value: 'platinum',
+                            child: Text('Platin'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'diamond',
+                            child: Text('Elmas'),
+                          ),
+                        ],
+                        onChanged: (val) => setModalState(() => tier = val!),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: boosterController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'XP Booster (%)',
+                          hintText: 'örn: 0.15',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -79,7 +167,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         controller: xpController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'XP Ödülü', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'XP Ödülü',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -88,7 +179,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         controller: pointsController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Puan Ödülü', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Puan Ödülü',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                   ],
@@ -101,14 +195,30 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         initialValue: requiredEvent,
                         dropdownColor: AppColors.card,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Gerekli Olay', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Gerekli Olay',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                         items: const [
-                          DropdownMenuItem(value: 'daily_login', child: Text('Günlük Giriş')),
-                          DropdownMenuItem(value: 'lineup_created', child: Text('Kadro Kurma')),
-                          DropdownMenuItem(value: 'prediction_created', child: Text('Tahmin Yapma')),
-                          DropdownMenuItem(value: 'post_created', child: Text('Post Paylaşma')),
+                          DropdownMenuItem(
+                            value: 'daily_login',
+                            child: Text('Günlük Giriş'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'lineup_created',
+                            child: Text('Kadro Kurma'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'prediction_created',
+                            child: Text('Tahmin Yapma'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'post_created',
+                            child: Text('Post Paylaşma'),
+                          ),
                         ],
-                        onChanged: (val) => setModalState(() => requiredEvent = val!),
+                        onChanged: (val) =>
+                            setModalState(() => requiredEvent = val!),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -117,7 +227,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         controller: countController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Hedef Sayı', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Hedef Sayı',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                   ],
@@ -132,11 +245,13 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                       description: descController.text,
                       category: category,
                       icon: 'shield_rounded',
-                      colorValue: 0xFFE53935,
+                      colorValue: colorForTier(tier),
                       xpReward: int.tryParse(xpController.text) ?? 0,
                       pointsReward: int.tryParse(pointsController.text) ?? 0,
                       requiredEvent: requiredEvent,
                       requiredCount: int.tryParse(countController.text) ?? 1,
+                      tier: tier,
+                      xpBooster: double.tryParse(boosterController.text) ?? 0.0,
                       createdAt: DateTime.now(),
                       updatedAt: DateTime.now(),
                     );
@@ -159,33 +274,48 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
     final pointsController = TextEditingController();
     final countController = TextEditingController();
     final keyController = TextEditingController();
+    final nextMissionController = TextEditingController();
     String type = 'daily';
+    bool isChained = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Yeni Görev Oluştur', style: AppTextStyles.h2),
+                const Text('Yeni Bağlı Görev Oluştur', style: AppTextStyles.h2),
                 const SizedBox(height: 24),
                 TextField(
                   controller: titleController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Başlık', labelStyle: TextStyle(color: AppColors.muted)),
+                  decoration: const InputDecoration(
+                    labelText: 'Başlık',
+                    labelStyle: TextStyle(color: AppColors.muted),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: descController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Açıklama', labelStyle: TextStyle(color: AppColors.muted)),
+                  decoration: const InputDecoration(
+                    labelText: 'Açıklama',
+                    labelStyle: TextStyle(color: AppColors.muted),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -194,7 +324,11 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                       child: TextField(
                         controller: keyController,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Görev Anahtarı', hintText: 'örn: daily_login', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Görev Anahtarı',
+                          hintText: 'örn: daily_login',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -203,11 +337,23 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         initialValue: type,
                         dropdownColor: AppColors.card,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Tür', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Tür',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                         items: const [
-                          DropdownMenuItem(value: 'daily', child: Text('Günlük')),
-                          DropdownMenuItem(value: 'weekly', child: Text('Haftalık')),
-                          DropdownMenuItem(value: 'seasonal', child: Text('Sezonluk')),
+                          DropdownMenuItem(
+                            value: 'daily',
+                            child: Text('Günlük'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'weekly',
+                            child: Text('Haftalık'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'seasonal',
+                            child: Text('Sezonluk'),
+                          ),
                         ],
                         onChanged: (val) => setModalState(() => type = val!),
                       ),
@@ -222,7 +368,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         controller: xpController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'XP Ödülü', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'XP Ödülü',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -231,7 +380,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                         controller: pointsController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'Puan Ödülü', labelStyle: TextStyle(color: AppColors.muted)),
+                        decoration: const InputDecoration(
+                          labelText: 'Puan Ödülü',
+                          labelStyle: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                     ),
                   ],
@@ -241,8 +393,38 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                   controller: countController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Gerekli Sayı', labelStyle: TextStyle(color: AppColors.muted)),
+                  decoration: const InputDecoration(
+                    labelText: 'Gerekli Sayı',
+                    labelStyle: TextStyle(color: AppColors.muted),
+                  ),
                 ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: AppColors.primaryRed,
+                  title: const Text(
+                    'Bağlı Görev (Chained Mission)',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Bu görev bittiğinde zincirleme başka görevi tetikler',
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  ),
+                  value: isChained,
+                  onChanged: (val) => setModalState(() => isChained = val),
+                ),
+                if (isChained) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nextMissionController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Sonraki Görev ID',
+                      hintText: 'Tetiklenecek hedefin tam ID\'si',
+                      labelStyle: TextStyle(color: AppColors.muted),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 32),
                 AppButton(
                   text: 'GÖREVİ OLUŞTUR',
@@ -256,6 +438,10 @@ class _AdminGamificationScreenState extends State<AdminGamificationScreen> with 
                       requiredCount: int.tryParse(countController.text) ?? 1,
                       xpReward: int.tryParse(xpController.text) ?? 0,
                       pointsReward: int.tryParse(pointsController.text) ?? 0,
+                      isChained: isChained,
+                      nextMissionId: isChained
+                          ? nextMissionController.text.trim()
+                          : null,
                       createdAt: DateTime.now(),
                       updatedAt: DateTime.now(),
                     );
@@ -313,6 +499,23 @@ class _BadgesTab extends StatelessWidget {
   final VoidCallback onCreate;
   const _BadgesTab({required this.repo, required this.onCreate});
 
+  String _tierName(String t) {
+    switch (t) {
+      case 'bronze':
+        return 'Bronz';
+      case 'silver':
+        return 'Gümüş';
+      case 'gold':
+        return 'Altın';
+      case 'platinum':
+        return 'Platin';
+      case 'diamond':
+        return 'Elmas';
+      default:
+        return 'Bronz';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -321,12 +524,8 @@ class _BadgesTab extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Tüm Rozetler', style: AppTextStyles.h2),
-            AppButton(
-              text: 'YENİ ROZET',
-              width: 160,
-              onTap: onCreate,
-            ),
+            const Text('Premium Kademeli Rozetler', style: AppTextStyles.h2),
+            AppButton(text: 'YENİ ROZET', width: 160, onTap: onCreate),
           ],
         ),
         const SizedBox(height: 24),
@@ -334,7 +533,14 @@ class _BadgesTab extends StatelessWidget {
           stream: repo.watchAllBadges(),
           builder: (context, snapshot) {
             final badges = snapshot.data ?? [];
-            if (badges.isEmpty) return const Center(child: Text('Henüz rozet tanımlanmamış.', style: TextStyle(color: Colors.white38)));
+            if (badges.isEmpty) {
+              return const Center(
+                child: Text(
+                  'Henüz premium rozet tanımlanmamış.',
+                  style: TextStyle(color: Colors.white38),
+                ),
+              );
+            }
 
             return GridView.builder(
               shrinkWrap: true,
@@ -343,7 +549,7 @@ class _BadgesTab extends StatelessWidget {
                 crossAxisCount: 4,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.0,
               ),
               itemCount: badges.length,
               itemBuilder: (context, index) {
@@ -352,10 +558,64 @@ class _BadgesTab extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.shield_rounded, color: Color(badge.colorValue), size: 32),
+                      Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          Icon(
+                            Icons.shield_rounded,
+                            color: Color(badge.colorValue),
+                            size: 40,
+                          ),
+                          if (badge.xpBooster > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryRed,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '+%${(badge.xpBooster * 100).toInt()}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
-                      Text(badge.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                      Text(badge.category, style: TextStyle(color: Color(badge.colorValue), fontSize: 10)),
+                      Text(
+                        badge.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_tierName(badge.tier)} Seviye',
+                        style: TextStyle(
+                          color: Color(badge.colorValue),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        badge.category,
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 10,
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -381,12 +641,11 @@ class _MissionsTab extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Aktif Görevler', style: AppTextStyles.h2),
-            AppButton(
-              text: 'YENİ GÖREV',
-              width: 160,
-              onTap: onCreate,
+            const Text(
+              'Bağlı (Chained) Görev Akışları',
+              style: AppTextStyles.h2,
             ),
+            AppButton(text: 'YENİ GÖREV', width: 160, onTap: onCreate),
           ],
         ),
         const SizedBox(height: 24),
@@ -394,21 +653,117 @@ class _MissionsTab extends StatelessWidget {
           stream: repo.watchAllMissions(),
           builder: (context, snapshot) {
             final missions = snapshot.data ?? [];
-            if (missions.isEmpty) return const Center(child: Text('Henüz görev tanımlanmamış.', style: TextStyle(color: Colors.white38)));
+            if (missions.isEmpty) {
+              return const Center(
+                child: Text(
+                  'Henüz bağlı görev tanımlanmamış.',
+                  style: TextStyle(color: Colors.white38),
+                ),
+              );
+            }
 
             return Column(
-              children: missions.map((mission) => PremiumCard(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppColors.primaryRed,
-                    child: Icon(Icons.assignment_rounded, color: Colors.white),
-                  ),
-                  title: Text(mission.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text(mission.description, style: const TextStyle(color: AppColors.muted)),
-                  trailing: Text('${mission.xpReward} XP', style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
-                ),
-              )).toList(),
+              children: missions
+                  .map(
+                    (mission) => PremiumCard(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: mission.isChained
+                              ? const Color(0xFF7B1FA2)
+                              : AppColors.primaryRed,
+                          child: Icon(
+                            mission.isChained
+                                ? Icons.link_rounded
+                                : Icons.assignment_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                mission.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (mission.isChained)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF7B1FA2,
+                                  ).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFF7B1FA2),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Bağlı Zincir',
+                                  style: TextStyle(
+                                    color: Color(0xFFE1BEE7),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              mission.description,
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
+                            if (mission.isChained &&
+                                mission.nextMissionId != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tetikler: ${mission.nextMissionId}',
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 10,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${mission.xpReward} XP',
+                              style: const TextStyle(
+                                color: AppColors.primaryGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (mission.pointsReward > 0)
+                              Text(
+                                '+${mission.pointsReward} Puan',
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             );
           },
         ),

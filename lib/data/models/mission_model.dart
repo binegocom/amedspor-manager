@@ -11,6 +11,8 @@ class MissionModel extends Equatable {
   final int xpReward;
   final int pointsReward;
   final String? badgeRewardId;
+  final String? nextMissionId; // for chained missions
+  final bool isChained;
   final bool active;
   final DateTime? startAt;
   final DateTime? endAt;
@@ -27,6 +29,8 @@ class MissionModel extends Equatable {
     required this.xpReward,
     required this.pointsReward,
     this.badgeRewardId,
+    this.nextMissionId,
+    this.isChained = false,
     this.active = true,
     this.startAt,
     this.endAt,
@@ -45,6 +49,8 @@ class MissionModel extends Equatable {
       xpReward: map['xpReward'] ?? 0,
       pointsReward: map['pointsReward'] ?? 0,
       badgeRewardId: map['badgeRewardId'] as String?,
+      nextMissionId: map['nextMissionId'] as String?,
+      isChained: map['isChained'] ?? false,
       active: map['active'] ?? true,
       startAt: _parseNullableDate(map['startAt']),
       endAt: _parseNullableDate(map['endAt']),
@@ -63,6 +69,8 @@ class MissionModel extends Equatable {
       'xpReward': xpReward,
       'pointsReward': pointsReward,
       if (badgeRewardId != null) 'badgeRewardId': badgeRewardId,
+      if (nextMissionId != null) 'nextMissionId': nextMissionId,
+      'isChained': isChained,
       'active': active,
       if (startAt != null) 'startAt': startAt?.toIso8601String(),
       if (endAt != null) 'endAt': endAt?.toIso8601String(),
@@ -80,6 +88,8 @@ class MissionModel extends Equatable {
     int? xpReward,
     int? pointsReward,
     String? badgeRewardId,
+    String? nextMissionId,
+    bool? isChained,
     bool? active,
     DateTime? startAt,
     DateTime? endAt,
@@ -95,6 +105,8 @@ class MissionModel extends Equatable {
       xpReward: xpReward ?? this.xpReward,
       pointsReward: pointsReward ?? this.pointsReward,
       badgeRewardId: badgeRewardId ?? this.badgeRewardId,
+      nextMissionId: nextMissionId ?? this.nextMissionId,
+      isChained: isChained ?? this.isChained,
       active: active ?? this.active,
       startAt: startAt ?? this.startAt,
       endAt: endAt ?? this.endAt,
@@ -127,6 +139,8 @@ class MissionModel extends Equatable {
         xpReward,
         pointsReward,
         badgeRewardId,
+        nextMissionId,
+        isChained,
         active,
         startAt,
         endAt,

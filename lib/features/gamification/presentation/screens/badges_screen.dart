@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/components/premium_card.dart';
 import '../../../../shared/components/premium_header.dart';
 import '../../../../data/models/user_badge_model.dart';
 import '../../../../data/repositories/gamification_repository.dart';
-import '../../../../data/services/firebase/firebase_providers.dart';
 
-class BadgesScreen extends StatelessWidget {
+class BadgesScreen extends ConsumerWidget {
   const BadgesScreen({super.key});
 
   static const String routePath = '/badges';
 
   @override
-  Widget build(BuildContext context) {
-    final repo = GamificationRepository();
-    final user = authService.currentUser;
-
-    if (user == null) return const SizedBox();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badgesAsync = ref.watch(userBadgesStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -25,26 +22,35 @@ class BadgesScreen extends StatelessWidget {
           children: [
             const PremiumHeader(title: 'ROZETLERİM', showBackButton: true),
             Expanded(
-              child: StreamBuilder<List<UserBadgeModel>>(
-                stream: repo.watchUserBadges(user.uid),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
-                  }
-
-                  final badges = snapshot.data ?? [];
-
+              child: badgesAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryRed),
+                ),
+                error: (err, stack) => Center(
+                  child: Text(
+                    'Hata: $err',
+                    style: const TextStyle(color: AppColors.primaryRed),
+                  ),
+                ),
+                data: (badges) {
                   if (badges.isEmpty) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shield_outlined, color: AppColors.muted.withValues(alpha: 0.3), size: 64),
+                          Icon(
+                            Icons.shield_outlined,
+                            color: AppColors.muted.withValues(alpha: 0.3),
+                            size: 64,
+                          ),
                           const SizedBox(height: 16),
-                          Text(
+                          const Text(
                             'Henüz hiç rozet kazanmadın.\nAktivitelere katılarak rozet topla!',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: AppColors.muted, height: 1.5),
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              height: 1.5,
+                            ),
                           ),
                         ],
                       ),
@@ -53,12 +59,13 @@ class BadgesScreen extends StatelessWidget {
 
                   return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.85,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.85,
+                        ),
                     itemCount: badges.length,
                     itemBuilder: (context, index) {
                       final badge = badges[index];
@@ -93,7 +100,10 @@ class _BadgeCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Color(badge.colorValue).withValues(alpha: 0.1),
-              border: Border.all(color: Color(badge.colorValue).withValues(alpha: 0.3), width: 2),
+              border: Border.all(
+                color: Color(badge.colorValue).withValues(alpha: 0.3),
+                width: 2,
+              ),
             ),
             child: Icon(
               _getIcon(badge.icon),
@@ -105,12 +115,21 @@ class _BadgeCard extends StatelessWidget {
           Text(
             badge.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             badge.category.toUpperCase(),
-            style: TextStyle(color: Color(badge.colorValue), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.1),
+            style: TextStyle(
+              color: Color(badge.colorValue),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -124,18 +143,38 @@ class _BadgeCard extends StatelessWidget {
 
   IconData _getIcon(String iconName) {
     switch (iconName) {
-      case 'shield': return Icons.shield_rounded;
-      case 'star': return Icons.stars_rounded;
-      case 'bolt': return Icons.bolt_rounded;
-      case 'emoji_events': return Icons.emoji_events_rounded;
-      case 'groups': return Icons.groups_rounded;
-      case 'sports_soccer': return Icons.sports_soccer_rounded;
-      default: return Icons.shield_rounded;
+      case 'shield':
+        return Icons.shield_rounded;
+      case 'star':
+        return Icons.stars_rounded;
+      case 'bolt':
+        return Icons.bolt_rounded;
+      case 'emoji_events':
+        return Icons.emoji_events_rounded;
+      case 'groups':
+        return Icons.groups_rounded;
+      case 'sports_soccer':
+        return Icons.sports_soccer_rounded;
+      default:
+        return Icons.shield_rounded;
     }
   }
 
   String _getMonthName(int month) {
-    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const months = [
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık',
+    ];
     return months[month - 1];
   }
 }

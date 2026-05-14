@@ -5,10 +5,13 @@ class XpEventModel extends Equatable {
   final String id;
   final String userId;
   final int amount;
+  final int pointsAmount;
   final String reason;
   final String eventType;
   final String sourceType;
   final String sourceId;
+  final String seasonId;
+  final String dedupeKey;
   final DateTime createdAt;
   final Map<String, dynamic> metadata;
 
@@ -16,10 +19,13 @@ class XpEventModel extends Equatable {
     required this.id,
     required this.userId,
     required this.amount,
+    this.pointsAmount = 0,
     required this.reason,
     required this.eventType,
     required this.sourceType,
     required this.sourceId,
+    this.seasonId = 'global',
+    this.dedupeKey = '',
     required this.createdAt,
     this.metadata = const {},
   });
@@ -29,10 +35,13 @@ class XpEventModel extends Equatable {
       id: id,
       userId: map['userId'] ?? '',
       amount: map['amount'] ?? 0,
+      pointsAmount: map['pointsAmount'] ?? 0,
       reason: map['reason'] ?? '',
       eventType: map['eventType'] ?? '',
       sourceType: map['sourceType'] ?? '',
       sourceId: map['sourceId'] ?? '',
+      seasonId: map['seasonId'] ?? 'global',
+      dedupeKey: map['dedupeKey'] ?? '',
       createdAt: _parseDate(map['createdAt']),
       metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
     );
@@ -42,10 +51,13 @@ class XpEventModel extends Equatable {
     return {
       'userId': userId,
       'amount': amount,
+      'pointsAmount': pointsAmount,
       'reason': reason,
       'eventType': eventType,
       'sourceType': sourceType,
       'sourceId': sourceId,
+      'seasonId': seasonId,
+      if (dedupeKey.isNotEmpty) 'dedupeKey': dedupeKey,
       'createdAt': createdAt.toIso8601String(),
       'metadata': metadata,
     };
@@ -59,14 +71,17 @@ class XpEventModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        amount,
-        reason,
-        eventType,
-        sourceType,
-        sourceId,
-        createdAt,
-        metadata,
-      ];
+    id,
+    userId,
+    amount,
+    pointsAmount,
+    reason,
+    eventType,
+    sourceType,
+    sourceId,
+    seasonId,
+    dedupeKey,
+    createdAt,
+    metadata,
+  ];
 }

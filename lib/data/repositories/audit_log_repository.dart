@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 class AuditLogRepository {
   Future<QuerySnapshot> getAuditLogsPaginated({
     int limit = 50,
     DocumentSnapshot? lastDocument,
   }) async {
-    Query query = FirebaseFirestore.instance.collection('auditLogs')
+    Query query = FirebaseFirestore.instance
+        .collection('auditLogs')
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
@@ -23,14 +26,20 @@ class AuditLogRepository {
     required String targetId,
     String? platform,
   }) async {
-    await FirebaseFirestore.instance.collection('auditLogs').add({
-      'adminEmail': adminEmail,
-      'action': action,
-      'targetType': targetType,
-      'targetId': targetId,
-      'platform': platform,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'writeAuditLog',
+      );
+      await callable.call({
+        'adminEmail': adminEmail,
+        'action': action,
+        'targetType': targetType,
+        'targetId': targetId,
+        'platform': platform ?? 'ADMIN_CONSOLE',
+      });
+    } catch (e) {
+      debugPrint('Mandatory backend-enforced audit log trigger error: $e');
+    }
   }
 
   Stream<List<Map<String, dynamic>>> watchRecentLogs({int limit = 10}) {
@@ -39,6 +48,10 @@ class AuditLogRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList(),
+        );
   }
 }

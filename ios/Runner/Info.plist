@@ -72,12 +72,14 @@
 		<string>mailto</string>
 		<string>tel</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-</dict>
+ 	<key>UISupportedInterfaceOrientations~ipad</key>
+ 	<array>
+ 		<string>UIInterfaceOrientationPortrait</string>
+ 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+ 		<string>UIInterfaceOrientationLandscapeLeft</string>
+ 		<string>UIInterfaceOrientationLandscapeRight</string>
+ 	</array>
+ 	<key>NSNotificationsUsageDescription</key>
+ 	<string>Uygulama maç özetleri, tahmin hatırlatmaları ve etkinlik bildirimleri almak için bildirim izni gereklidir.</string>
+ </dict>
 </plist>

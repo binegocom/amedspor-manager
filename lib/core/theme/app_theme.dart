@@ -16,6 +16,13 @@ class AppTheme {
         onPrimary: AppColors.white,
         onSurface: AppColors.white,
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       cardTheme: CardThemeData(
         color: AppColors.card,
         elevation: 0,

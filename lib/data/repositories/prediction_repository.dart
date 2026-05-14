@@ -9,15 +9,35 @@ class PredictionRepository {
         .set(prediction.toMap());
   }
 
-  Stream<List<PredictionModel>> watchUserPredictions(String userId, {int limit = 30}) {
+  Stream<List<PredictionModel>> watchUserPredictions(
+    String userId, {
+    int limit = 30,
+  }) {
     return firestoreService.predictions
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => PredictionModel.fromMap(doc.id, doc.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => PredictionModel.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  Stream<List<PredictionModel>> watchMatchPredictions(
+    String matchId, {
+    int limit = 100,
+  }) {
+    return firestoreService.predictions
+        .where('matchId', isEqualTo: matchId)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => PredictionModel.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Future<QuerySnapshot> getPredictionsSnapshotPaginated({

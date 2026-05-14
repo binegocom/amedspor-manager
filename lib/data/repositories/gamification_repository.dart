@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/badge_model.dart';
 import '../models/user_badge_model.dart';
 import '../models/mission_model.dart';
@@ -231,3 +232,10 @@ class GamificationRepository {
     }, SetOptions(merge: true));
   }
 }
+
+// Küresel ve önbelleklenmiş kullanıcı rozetleri akışı
+final userBadgesStreamProvider = StreamProvider.autoDispose<List<UserBadgeModel>>((ref) {
+  final user = authService.currentUser;
+  if (user == null) return Stream.value([]);
+  return GamificationRepository().watchUserBadges(user.uid);
+});

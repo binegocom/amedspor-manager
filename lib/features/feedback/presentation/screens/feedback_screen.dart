@@ -24,16 +24,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   final List<Map<String, dynamic>> _types = [
     {'id': 'bug', 'label': 'Hata Bildir', 'icon': Icons.bug_report_rounded},
-    {'id': 'suggestion', 'label': 'Öneri / İstek', 'icon': Icons.lightbulb_rounded},
-    {'id': 'account', 'label': 'Hesap Sorunu', 'icon': Icons.person_off_rounded},
+    {
+      'id': 'suggestion',
+      'label': 'Öneri / İstek',
+      'icon': Icons.lightbulb_rounded,
+    },
+    {
+      'id': 'account',
+      'label': 'Hesap Sorunu',
+      'icon': Icons.person_off_rounded,
+    },
     {'id': 'other', 'label': 'Diğer', 'icon': Icons.more_horiz_rounded},
   ];
 
   Future<void> _submit() async {
     if (_messageController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen bir mesaj yazın.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lütfen bir mesaj yazın.')));
       return;
     }
 
@@ -64,9 +72,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata oluştu: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Hata oluştu: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -86,54 +94,76 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Konu Seçin',
-                    style: AppTextStyles.h3,
-                  ),
+                  const Text('Konu Seçin', style: AppTextStyles.h3),
                   const SizedBox(height: 16),
-                  Row(
-                    children: _types.map((type) {
-                      final isSelected = _selectedType == type['id'];
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedType = type['id']),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primaryGreen : AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected ? AppColors.primaryGreen : Colors.white10,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const spacing = 8.0;
+                      final itemWidth = (constraints.maxWidth - spacing) / 2;
+
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: _types.map((type) {
+                          final isSelected = _selectedType == type['id'];
+
+                          return SizedBox(
+                            width: itemWidth,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  setState(() => _selectedType = type['id']),
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: 92,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primaryGreen
+                                      : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primaryGreen
+                                        : Colors.white10,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      type['icon'],
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.muted,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      type['label'],
+                                      style: AppTextStyles.label.copyWith(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : AppColors.muted,
+                                        fontSize: 10,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  type['icon'],
-                                  color: isSelected ? Colors.white : AppColors.muted,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  type['label'],
-                                  style: AppTextStyles.label.copyWith(
-                                    color: isSelected ? Colors.white : AppColors.muted,
-                                    fontSize: 10,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
+                    },
                   ),
                   const SizedBox(height: 32),
-                  const Text(
-                    'Mesajınız',
-                    style: AppTextStyles.h3,
-                  ),
+                  const Text('Mesajınız', style: AppTextStyles.h3),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _messageController,

@@ -5,6 +5,7 @@ class LineupModel {
   final String userId;
   final String matchId;
   final String formation;
+  final String? philosophy; // Taktiksel felsefe (Gegenpressing, Tiki-Taka, Catenaccio vb.)
   final List<Map<String, dynamic>> players;
   final List<Map<String, dynamic>> substitutes;
   final int likes;
@@ -17,6 +18,7 @@ class LineupModel {
     required this.userId,
     required this.matchId,
     required this.formation,
+    this.philosophy,
     required this.players,
     required this.substitutes,
     required this.likes,
@@ -31,6 +33,7 @@ class LineupModel {
       userId: map['userId'] ?? '',
       matchId: map['matchId'] ?? '',
       formation: map['formation'] ?? '4-3-3',
+      philosophy: map['philosophy'] as String?,
       players: List<Map<String, dynamic>>.from(map['players'] ?? []),
       substitutes: List<Map<String, dynamic>>.from(map['substitutes'] ?? []),
       likes: map['likes'] ?? 0,
@@ -45,6 +48,7 @@ class LineupModel {
       'userId': userId,
       'matchId': matchId,
       'formation': formation,
+      if (philosophy != null) 'philosophy': philosophy,
       'players': players,
       'substitutes': substitutes,
       'likes': likes,

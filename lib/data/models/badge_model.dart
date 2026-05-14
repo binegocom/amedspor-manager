@@ -12,6 +12,8 @@ class BadgeModel extends Equatable {
   final int pointsReward;
   final String requiredEvent;
   final int requiredCount;
+  final String tier; // bronze, silver, gold, platinum, diamond
+  final double xpBooster; // percentage boost, e.g. 0.15 for +15%
   final bool active;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -27,6 +29,8 @@ class BadgeModel extends Equatable {
     required this.pointsReward,
     required this.requiredEvent,
     required this.requiredCount,
+    this.tier = 'bronze',
+    this.xpBooster = 0.0,
     this.active = true,
     required this.createdAt,
     required this.updatedAt,
@@ -44,6 +48,8 @@ class BadgeModel extends Equatable {
       pointsReward: map['pointsReward'] ?? 0,
       requiredEvent: map['requiredEvent'] ?? '',
       requiredCount: map['requiredCount'] ?? 0,
+      tier: map['tier'] ?? 'bronze',
+      xpBooster: (map['xpBooster'] as num?)?.toDouble() ?? 0.0,
       active: map['active'] ?? true,
       createdAt: _parseDate(map['createdAt']),
       updatedAt: _parseDate(map['updatedAt']),
@@ -61,6 +67,8 @@ class BadgeModel extends Equatable {
       'pointsReward': pointsReward,
       'requiredEvent': requiredEvent,
       'requiredCount': requiredCount,
+      'tier': tier,
+      'xpBooster': xpBooster,
       'active': active,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -77,6 +85,8 @@ class BadgeModel extends Equatable {
     int? pointsReward,
     String? requiredEvent,
     int? requiredCount,
+    String? tier,
+    double? xpBooster,
     bool? active,
     DateTime? updatedAt,
   }) {
@@ -91,6 +101,8 @@ class BadgeModel extends Equatable {
       pointsReward: pointsReward ?? this.pointsReward,
       requiredEvent: requiredEvent ?? this.requiredEvent,
       requiredCount: requiredCount ?? this.requiredCount,
+      tier: tier ?? this.tier,
+      xpBooster: xpBooster ?? this.xpBooster,
       active: active ?? this.active,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -115,6 +127,8 @@ class BadgeModel extends Equatable {
         pointsReward,
         requiredEvent,
         requiredCount,
+        tier,
+        xpBooster,
         active,
         createdAt,
         updatedAt,

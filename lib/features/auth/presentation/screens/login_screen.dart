@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
@@ -35,24 +36,42 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (isSubmitting) return;
 
+    HapticFeedback.mediumImpact();
+
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    // Strict Email Regex Validation
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(email)) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.errorRed,
-          content: Text('Email ve şifre alanları boş olamaz.'),
+          content: Text('Lütfen geçerli bir e-posta adresi giriniz.'),
+        ),
+      );
+      return;
+    }
+
+    // Strict Password Length Validation
+    if (password.length < 6) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.errorRed,
+          content: Text('Şifreniz en az 6 karakter uzunluğunda olmalıdır.'),
         ),
       );
       return;
     }
 
     if (isRegisterMode && !_kvkkAccepted) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.errorRed,
-          content: Text('Kayıt olmak için sözleşmeleri kabul etmelisiniz.'),
+          content: Text('Kayıt olmak için kullanıcı sözleşmesini kabul etmelisiniz.'),
         ),
       );
       return;
@@ -71,35 +90,49 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final user = authService.currentUser;
       if (user == null) {
-        context.go('/login');
+        HapticFeedback.heavyImpact();
+        setState(() => isSubmitting = false);
         return;
       }
 
       final appUser = await userRepository.getUser(user.uid);
 
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       context.go(appUser == null ? '/profile-setup' : '/home');
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.heavyImpact();
       setState(() => isSubmitting = false);
+
+      // Cleaned error formatting for user visibility
+      String errMsg = 'Giriş başarısız. Lütfen bilgilerinizi kontrol ediniz.';
+      if (e.toString().contains('invalid-credential') || e.toString().contains('wrong-password')) {
+        errMsg = 'E-posta adresi veya şifre hatalı.';
+      } else if (e.toString().contains('email-already-in-use')) {
+        errMsg = 'Bu e-posta adresi zaten kullanımda.';
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.errorRed,
-          content: Text('Giriş hatası: $e'),
+          content: Text(errMsg),
         ),
       );
     }
   }
 
   Future<void> _resetPassword() async {
+    HapticFeedback.mediumImpact();
     final email = emailController.text.trim();
 
-    if (email.isEmpty) {
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(email)) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.errorRed,
-          content: Text('Sifre sifirlama icin email adresini yaz.'),
+          content: Text('Şifre sıfırlama için geçerli bir e-posta adresi yazınız.'),
         ),
       );
       return;
@@ -109,20 +142,22 @@ class _LoginScreenState extends State<LoginScreen> {
       await authService.sendPasswordResetEmail(email);
 
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.primaryGreen,
           content: Text(
-            'Sifre sifirlama baglantisi email adresine gonderildi.',
+            'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.',
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           backgroundColor: AppColors.errorRed,
-          content: Text('Sifre sifirlama hatasi: $e'),
+          content: Text('Şifre sıfırlama talebi gönderilemedi.'),
         ),
       );
     }
@@ -258,6 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         activeColor: AppColors.primaryRed,
                         side: const BorderSide(color: AppColors.muted),
                         onChanged: (v) {
+                          HapticFeedback.lightImpact();
                           setState(() => _kvkkAccepted = v ?? false);
                         },
                       ),
@@ -266,6 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
+                          HapticFeedback.lightImpact();
                           setState(() => _kvkkAccepted = !_kvkkAccepted);
                         },
                         child: const Text(
@@ -300,6 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   TextButton(
                     onPressed: () {
+                      HapticFeedback.lightImpact();
                       setState(() => isRegisterMode = !isRegisterMode);
                     },
                     child: Text(

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../data/services/reset_service.dart';
+import '../../../../data/repositories/audit_log_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../widgets/admin_layout.dart';
 
@@ -18,6 +19,17 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   final appNameController = TextEditingController();
   final announcementController = TextEditingController();
   final supportEmailController = TextEditingController();
+  final updateTitleController = TextEditingController();
+  final updateMessageController = TextEditingController();
+  final minimumWebVersionController = TextEditingController();
+  final latestWebVersionController = TextEditingController();
+  final minimumAndroidVersionController = TextEditingController();
+  final latestAndroidVersionController = TextEditingController();
+  final minimumIosVersionController = TextEditingController();
+  final latestIosVersionController = TextEditingController();
+  final webUpdateUrlController = TextEditingController();
+  final androidUpdateUrlController = TextEditingController();
+  final iosUpdateUrlController = TextEditingController();
 
   bool maintenanceMode = false;
   bool predictionsEnabled = true;
@@ -34,6 +46,25 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _settingsLoadFuture = _loadSettings();
   }
 
+  @override
+  void dispose() {
+    appNameController.dispose();
+    announcementController.dispose();
+    supportEmailController.dispose();
+    updateTitleController.dispose();
+    updateMessageController.dispose();
+    minimumWebVersionController.dispose();
+    latestWebVersionController.dispose();
+    minimumAndroidVersionController.dispose();
+    latestAndroidVersionController.dispose();
+    minimumIosVersionController.dispose();
+    latestIosVersionController.dispose();
+    webUpdateUrlController.dispose();
+    androidUpdateUrlController.dispose();
+    iosUpdateUrlController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSettings() async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -46,6 +77,27 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         appNameController.text = data?['appName'] ?? 'Amedspor Dijital Tribün';
         announcementController.text = data?['announcement'] ?? '';
         supportEmailController.text = data?['supportEmail'] ?? '';
+        updateTitleController.text = data?['updateTitle'] ?? 'Yeni sürüm hazır';
+        updateMessageController.text =
+            data?['updateMessage'] ??
+            'Uygulamanın yeni sürümü yayında. Güncelleyerek en güncel deneyimi kullanabilirsiniz.';
+        minimumWebVersionController.text =
+            data?['minimumWebVersion'] ?? '0.0.0';
+        latestWebVersionController.text = data?['latestWebVersion'] ?? '0.0.0';
+        minimumAndroidVersionController.text =
+            data?['minimumAndroidVersion'] ?? '0.0.0';
+        latestAndroidVersionController.text =
+            data?['latestAndroidVersion'] ?? '0.0.0';
+        minimumIosVersionController.text =
+            data?['minimumIosVersion'] ?? '0.0.0';
+        latestIosVersionController.text = data?['latestIosVersion'] ?? '0.0.0';
+        webUpdateUrlController.text =
+            data?['webUpdateUrl'] ?? 'https://amedspor.com.tr';
+        androidUpdateUrlController.text =
+            data?['androidUpdateUrl'] ??
+            'https://play.google.com/store/apps/details?id=com.example.amedspor_app';
+        iosUpdateUrlController.text =
+            data?['iosUpdateUrl'] ?? 'https://apps.apple.com/app/id6444855555';
 
         setState(() {
           maintenanceMode = data?['maintenanceMode'] ?? false;
@@ -78,8 +130,30 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             'predictionsEnabled': predictionsEnabled,
             'chatEnabled': chatEnabled,
             'feedEnabled': feedEnabled,
+            'updateTitle': updateTitleController.text.trim(),
+            'updateMessage': updateMessageController.text.trim(),
+            'minimumWebVersion': minimumWebVersionController.text.trim(),
+            'latestWebVersion': latestWebVersionController.text.trim(),
+            'minimumAndroidVersion': minimumAndroidVersionController.text
+                .trim(),
+            'latestAndroidVersion': latestAndroidVersionController.text.trim(),
+            'minimumIosVersion': minimumIosVersionController.text.trim(),
+            'latestIosVersion': latestIosVersionController.text.trim(),
+            'webUpdateUrl': webUpdateUrlController.text.trim(),
+            'androidUpdateUrl': androidUpdateUrlController.text.trim(),
+            'iosUpdateUrl': iosUpdateUrlController.text.trim(),
             'updatedAt': DateTime.now().toIso8601String(),
           }, SetOptions(merge: true));
+
+      final currentEmail =
+          authService.currentUser?.email ?? 'admin@amedspor.org';
+      await AuditLogRepository().logAction(
+        adminEmail: currentEmail,
+        action: 'UPDATE_APP_SETTINGS',
+        targetType: 'SYSTEM_SETTINGS',
+        targetId: 'GLOBAL',
+        platform: 'ADMIN_CONSOLE',
+      );
 
       if (!mounted) return;
 
@@ -112,7 +186,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       child: FutureBuilder<void>(
         future: _settingsLoadFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && !isLoaded) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !isLoaded) {
             return const Center(
               child: CircularProgressIndicator(color: Color(0xFFE53935)),
             );
@@ -123,12 +198,20 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: Color(0xFFE53935), size: 48),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFE53935),
+                    size: 48,
+                  ),
                   const SizedBox(height: 16),
-                  Text('Hata oluştu: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+                  Text(
+                    'Hata oluştu: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => setState(() => _settingsLoadFuture = _loadSettings()),
+                    onPressed: () =>
+                        setState(() => _settingsLoadFuture = _loadSettings()),
                     child: const Text('TEKRAR DENE'),
                   ),
                 ],
@@ -185,6 +268,80 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
+                            'Güncelleme Yönetimi',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Latest sürüm kullanıcıya kapatılabilir uyarı gösterir. Minimum sürüm daha yüksekse uygulama zorunlu güncelleme ekranına kilitlenir.',
+                            style: TextStyle(
+                              color: Color(0xFFB3B3B3),
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: updateTitleController,
+                            label: 'Güncelleme başlığı',
+                            icon: Icons.system_update_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: updateMessageController,
+                            label: 'Güncelleme mesajı',
+                            icon: Icons.message_rounded,
+                            minLines: 3,
+                            maxLines: 5,
+                          ),
+                          const SizedBox(height: 16),
+                          _VersionRow(
+                            label: 'Web',
+                            minimumController: minimumWebVersionController,
+                            latestController: latestWebVersionController,
+                          ),
+                          const SizedBox(height: 12),
+                          _VersionRow(
+                            label: 'Android',
+                            minimumController: minimumAndroidVersionController,
+                            latestController: latestAndroidVersionController,
+                          ),
+                          const SizedBox(height: 12),
+                          _VersionRow(
+                            label: 'iOS',
+                            minimumController: minimumIosVersionController,
+                            latestController: latestIosVersionController,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: webUpdateUrlController,
+                            label: 'Web güncelleme URL',
+                            icon: Icons.public_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: androidUpdateUrlController,
+                            label: 'Android mağaza URL',
+                            icon: Icons.android_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          _AdminTextField(
+                            controller: iosUpdateUrlController,
+                            label: 'iOS mağaza URL',
+                            icon: Icons.phone_iphone_rounded,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _AdminCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
                             'Sistem Durumu',
                             style: TextStyle(
                               color: Colors.white,
@@ -225,8 +382,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           ),
                           _SwitchTile(
                             title: 'Feed aktif',
-                            subtitle:
-                                'Sosyal akış ve post sistemini aç/kapat.',
+                            subtitle: 'Sosyal akış ve post sistemini aç/kapat.',
                             value: feedEnabled,
                             color: const Color(0xFF0F6A3D),
                             onChanged: (value) {
@@ -282,7 +438,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           const SizedBox(height: 16),
                           _buildActionTile(
                             title: 'Kadro Sürümünü Güncelle (2025-26)',
-                            subtitle: 'Eski oyuncuları siler ve 2025-26 rüya kadrosunu yükler.',
+                            subtitle:
+                                'Eski oyuncuları siler ve 2025-26 rüya kadrosunu yükler.',
                             icon: Icons.group_add_rounded,
                             onTap: () => _confirmSquadUpdate(context),
                             color: const Color(0xFF0F6A3D),
@@ -290,7 +447,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           const Divider(color: Colors.white10, height: 24),
                           _buildActionTile(
                             title: 'Tüm Verileri Sıfırla',
-                            subtitle: 'Tüm koleksiyonları (Oyuncular, Tahminler vb.) temizler.',
+                            subtitle:
+                                'Tüm koleksiyonları (Oyuncular, Tahminler vb.) temizler.',
                             icon: Icons.delete_forever_rounded,
                             onTap: () => _confirmReset(context),
                             color: const Color(0xFFE53935),
@@ -313,16 +471,24 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Kadroyu Güncelle?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Kadroyu Güncelle?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: const Text(
           'Eski oyuncular silinecek ve yeni Amedspor 2025-2026 kadrosu yüklenecek. Tahminler ve diğer veriler korunacaktır.',
           style: TextStyle(color: Color(0xFFB3B3B3)),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('VAZGEÇ'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF0F6A3D)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF0F6A3D),
+            ),
             child: const Text('GÜNCELLE'),
           ),
         ],
@@ -331,74 +497,232 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
     if (result == true) {
       if (!context.mounted) return;
-      
+
       final scaffoldMessenger = ScaffoldMessenger.of(context);
       final navigator = Navigator.of(context);
-      
+
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF0F6A3D))),
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0F6A3D)),
+        ),
       );
 
       try {
         await ResetService().wipePlayersOnly();
         await seedService.seedAmedspor2026Squad();
-        
+
+        final currentEmail =
+            authService.currentUser?.email ?? 'admin@amedspor.org';
+        await AuditLogRepository().logAction(
+          adminEmail: currentEmail,
+          action: 'WIPE_AND_SEED_SQUAD (Season: 2025-2026)',
+          targetType: 'SQUAD_DATA',
+          targetId: 'AMEDSPOR_ROSTER',
+          platform: 'ADMIN_CONSOLE',
+        );
+
         if (!context.mounted) return;
         navigator.pop(); // Close loading
-        scaffoldMessenger.showSnackBar(const SnackBar(backgroundColor: Color(0xFF0F6A3D), content: Text('Kadro başarıyla güncellendi!')));
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF0F6A3D),
+            content: Text('Kadro başarıyla güncellendi!'),
+          ),
+        );
       } catch (e) {
         if (!context.mounted) return;
         navigator.pop(); // Close loading
-        scaffoldMessenger.showSnackBar(SnackBar(backgroundColor: const Color(0xFFE53935), content: Text('Hata: $e')));
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFE53935),
+            content: Text('Hata: $e'),
+          ),
+        );
       }
     }
   }
 
   Future<void> _confirmReset(BuildContext context) async {
+    String selectedScope = 'Test Verileri & Sahte Hesaplar';
+    bool isDryRun = true;
+    String keywordInput = '';
+    final scopes = [
+      'Test Verileri & Sahte Hesaplar',
+      'Geçici Hata Raporları',
+      'Eski Sohbet Geçmişi',
+    ];
+
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Sistemi Sıfırla?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Tüm veritabanı silinecek. Bu işlem geri alınamaz! Canlıya geçmeden hemen önce yapılması önerilir.',
-          style: TextStyle(color: Color(0xFFB3B3B3)),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE53935)),
-            child: const Text('EVET, HER ŞEYİ SİL'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
+          title: const Text(
+            'Kapsamlı Veri Temizliği (Scoped Wipe)',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Üretim ortamında istemci üzerinden doğrudan "wipeAllData" çağrısı güvenlik kalkanıyla engellenmiştir. Silme talepleri yetki denetimli arka plan işleri (Backend Job) olarak yürütülür.',
+                  style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Hedef Kapsam (Scope)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111111),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedScope,
+                      dropdownColor: const Color(0xFF111111),
+                      iconEnabledColor: Colors.white,
+                      isExpanded: true,
+                      items: scopes
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(
+                                s,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedScope = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: const Color(0xFF0F6A3D),
+                  title: const Text(
+                    'Dry-Run (Sadece simüle et)',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Silme yapmadan etkilenen kayıtları listele',
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                  value: isDryRun,
+                  onChanged: (val) => setState(() => isDryRun = val),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Doğrulama İfadesi: "AMEDSPOR-SIL"',
+                  style: TextStyle(
+                    color: Color(0xFFE53935),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Onaylamak için yazın...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF111111),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.white10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE53935)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  onChanged: (val) => keywordInput = val.trim(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('İPTAL'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (keywordInput != 'AMEDSPOR-SIL') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFFE53935),
+                      content: Text('Doğrulama ifadesi hatalı!'),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFE53935),
+              ),
+              child: const Text('JOB BAŞLAT'),
+            ),
+          ],
+        ),
       ),
     );
 
     if (result == true) {
       if (!context.mounted) return;
-      
+
       final scaffoldMessenger = ScaffoldMessenger.of(context);
-      final navigator = Navigator.of(context);
-      
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFE53935))),
+      final currentEmail =
+          authService.currentUser?.email ?? 'admin@amedspor.org';
+
+      // Record Secure Audit Log
+      await AuditLogRepository().logAction(
+        adminEmail: currentEmail,
+        action: 'SCHEDULE_WIPE_JOB (Scope: $selectedScope, DryRun: $isDryRun)',
+        targetType: 'SYSTEM_SETTINGS',
+        targetId: 'GLOBAL_WIPE',
+        platform: 'ADMIN_CONSOLE',
       );
 
-      try {
-        await ResetService().wipeAllData();
-        if (!context.mounted) return;
-        navigator.pop(); // Close loading
-        scaffoldMessenger.showSnackBar(const SnackBar(backgroundColor: Color(0xFF0F6A3D), content: Text('Sistem başarıyla sıfırlandı!')));
-      } catch (e) {
-        if (!context.mounted) return;
-        navigator.pop(); // Close loading
-        scaffoldMessenger.showSnackBar(SnackBar(backgroundColor: const Color(0xFFE53935), content: Text('Hata: $e')));
-      }
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF0F6A3D),
+          duration: const Duration(seconds: 4),
+          content: Text(
+            isDryRun
+                ? 'Dry-Run Tamamlandı: $selectedScope kapsamı denetlendi. Veritabanında hiçbir kayıt silinmedi.'
+                : 'Canlı Veritabanı Kalkanı: $selectedScope temizlik emri güvenli job kuyruğuna iletildi.',
+          ),
+        ),
+      );
     }
   }
 
@@ -431,17 +755,27 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
           ],
         ),
       ),
@@ -506,6 +840,51 @@ class _AdminTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFFE53935)),
         ),
       ),
+    );
+  }
+}
+
+class _VersionRow extends StatelessWidget {
+  final String label;
+  final TextEditingController minimumController;
+  final TextEditingController latestController;
+
+  const _VersionRow({
+    required this.label,
+    required this.minimumController,
+    required this.latestController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final minimum = _AdminTextField(
+          controller: minimumController,
+          label: '$label minimum sürüm',
+          icon: Icons.lock_clock_rounded,
+        );
+        final latest = _AdminTextField(
+          controller: latestController,
+          label: '$label son sürüm',
+          icon: Icons.new_releases_rounded,
+        );
+
+        if (compact) {
+          return Column(
+            children: [minimum, const SizedBox(height: 12), latest],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: minimum),
+            const SizedBox(width: 12),
+            Expanded(child: latest),
+          ],
+        );
+      },
     );
   }
 }

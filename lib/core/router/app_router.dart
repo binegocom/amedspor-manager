@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../guards/auth_guard.dart';
+import '../guards/admin_guard.dart';
+import '../guards/onboarding_guard.dart';
+import 'go_router_refresh_stream.dart';
 import '../../data/services/firebase/firebase_providers.dart';
 
 // Admin Screens
@@ -10,17 +13,20 @@ import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_matches_screen.dart';
 import '../../features/admin/presentation/screens/admin_posts_screen.dart';
 import '../../features/admin/presentation/screens/admin_predictions_screen.dart';
+import '../../features/admin/presentation/screens/admin_quality_screen.dart';
 import '../../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../../features/admin/presentation/screens/admin_send_notification_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/admin/presentation/screens/admin_players_screen.dart';
+import '../../features/admin/presentation/screens/admin_points_screen.dart';
 import '../../features/admin/presentation/screens/admin_gamification_screen.dart';
 import '../../features/admin/presentation/screens/admin_lineups_screen.dart';
 import '../../features/admin/presentation/screens/admin_live_match_screen.dart';
 import '../../features/admin/presentation/screens/admin_questions_screen.dart';
 import '../../features/admin/presentation/screens/admin_errors_screen.dart';
 import '../../features/admin/presentation/screens/admin_audit_logs_screen.dart';
+import '../../features/admin/presentation/screens/admin_content_screen.dart';
 
 // Auth Screens
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -34,14 +40,17 @@ import '../../features/blocking/presentation/screens/blocked_users_screen.dart';
 import '../../features/feed/presentation/screens/create_post_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_detail_screen.dart';
-import '../../features/home/presentation/screens/home_screen.dart';
+
+import '../../features/home/presentation/screens/manager_home_screen.dart';
 import '../../features/leaderboard/presentation/screens/leaderboard_screen.dart';
 import '../../features/lineup/presentation/screens/lineup_builder_screen.dart';
 import '../../features/lineup/presentation/screens/lineup_detail_screen.dart';
 import '../../features/lineup/presentation/screens/my_lineups_screen.dart';
 import '../../features/lineup/presentation/screens/top_lineups_screen.dart';
+import '../../features/lineup/presentation/screens/weekly_best_lineups_screen.dart';
 import '../../features/matches/presentation/screens/matches_screen.dart';
 import '../../features/matches/presentation/screens/live_match_center_screen.dart';
+import '../../features/matches/presentation/screens/match_report_screen.dart';
 import '../../features/moderation/presentation/screens/report_screen.dart';
 import '../../features/moderation/presentation/screens/reports_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
@@ -56,92 +65,60 @@ import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/about_screen.dart';
 import '../../features/settings/presentation/screens/policy_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/match_simulation/presentation/screens/scenario_screen.dart';
+import '../../features/finance/presentation/screens/sponsorship_screen.dart';
+import '../../features/club/presentation/screens/association_screen.dart';
+import '../../features/club/presentation/screens/museum_screen.dart';
+import '../../features/academy/presentation/screens/academy_screen.dart';
+import '../../features/transfer/presentation/screens/transfer_market_screen.dart';
+import '../../features/club/presentation/screens/facilities_screen.dart';
+import '../../features/training/presentation/screens/training_screen.dart';
+import '../../features/club/presentation/screens/club_hub_screen.dart';
+import '../../features/squad/presentation/screens/squad_hub_screen.dart';
+import '../../features/transfer/presentation/screens/transfer_hub_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/match_simulation/presentation/screens/match_simulation_screen.dart';
+import '../../features/assistant/presentation/screens/ai_assistant_screen.dart';
 import '../analytics/analytics_service.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final List<String> authRequiredRoutes = [
-  '/profile-setup',
-  '/lineups/me',
-  '/predictions/me',
-  '/create-post',
-  '/profile',
-  '/notifications',
-  '/reports',
-  '/settings',
-];
-
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
+  refreshListenable: GoRouterRefreshStream(authService.authStateChanges()),
   observers: [AnalyticsService.observer],
   redirect: (context, state) async {
-    final bool isAdminRoute = state.matchedLocation.startsWith('/admin');
-    final bool isAuthRequired = authRequiredRoutes.any((r) => state.matchedLocation.startsWith(r));
-    final bool isLoginRoute = state.matchedLocation == '/login';
-    final user = authService.currentUser;
+    final location = state.matchedLocation;
 
-    // Onboarding Protection
-    final hasSeenOnboarding = await appStateService.isOnboardingCompleted();
-    final bool isOnboardingRoute = state.matchedLocation == '/onboarding';
+    // 1. Onboarding Guard
+    final onboardingRedirect = await OnboardingGuard.redirect(location);
+    if (onboardingRedirect != null) return onboardingRedirect;
 
-    if (!hasSeenOnboarding && !isOnboardingRoute) {
-      return '/onboarding';
-    }
+    // 2. Auth Guard
+    final authRedirect = AuthGuard.redirect(location);
+    if (authRedirect != null) return authRedirect;
 
-    if (hasSeenOnboarding && isOnboardingRoute) {
-      return '/login'; // Or '/home' depending on auth, but GoRouter will handle it on next pass if user is logged in
-    }
-
-    // Login screen protection (logged in users shouldn't see it)
-    if (isLoginRoute && user != null) {
-      return '/home';
-    }
-
-    // Admin Panel Protection
-    if (isAdminRoute) {
-      if (!kIsWeb) return '/home'; // Admin is Web-Only
-      if (user == null) return '/login'; // Must be logged in
-
-      try {
-        final doc = await firestoreService.users.doc(user.uid).get();
-        final role = doc.data()?['role'];
-        if (role != 'admin' && role != 'moderator') {
-          return '/home';
-        }
-      } catch (e) {
-        return '/login';
-      }
-    }
-
-    // Standard Auth Protection
-    if (isAuthRequired && user == null) {
-      return '/login';
-    }
+    // 3. Admin Guard
+    final adminRedirect = await AdminGuard.redirect(location);
+    if (adminRedirect != null) return adminRedirect;
 
     return null;
   },
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const SplashScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
     ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/profile-setup',
       builder: (context, state) => const ProfileSetupScreen(),
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const HomeScreen(),
+      builder: (context, state) => const ManagerHomeScreen(),
     ),
     GoRoute(
       path: '/matches',
@@ -149,25 +126,31 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/match-live/:matchId',
-      builder: (context, state) => LiveMatchCenterScreen(
-        matchId: state.pathParameters['matchId'] ?? '',
-      ),
+      builder: (context, state) =>
+          LiveMatchCenterScreen(matchId: state.pathParameters['matchId'] ?? ''),
+    ),
+    GoRoute(
+      path: '/match-report/:matchId',
+      builder: (context, state) =>
+          MatchReportScreen(matchId: state.pathParameters['matchId'] ?? ''),
     ),
     GoRoute(
       path: '/lineup/:matchId',
-      builder: (context, state) => LineupBuilderScreen(
-        matchId: state.pathParameters['matchId'] ?? '',
-      ),
+      builder: (context, state) =>
+          LineupBuilderScreen(matchId: state.pathParameters['matchId'] ?? ''),
     ),
     GoRoute(
       path: '/lineup-detail/:lineupId',
-      builder: (context, state) => LineupDetailScreen(
-        lineupId: state.pathParameters['lineupId'] ?? '',
-      ),
+      builder: (context, state) =>
+          LineupDetailScreen(lineupId: state.pathParameters['lineupId'] ?? ''),
     ),
     GoRoute(
       path: '/lineups/top',
       builder: (context, state) => const TopLineupsScreen(),
+    ),
+    GoRoute(
+      path: '/lineups/weekly-best',
+      builder: (context, state) => const WeeklyBestLineupsScreen(),
     ),
     GoRoute(
       path: '/lineups/me',
@@ -175,9 +158,8 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/prediction/:matchId',
-      builder: (context, state) => PredictionScreen(
-        matchId: state.pathParameters['matchId'] ?? '',
-      ),
+      builder: (context, state) =>
+          PredictionScreen(matchId: state.pathParameters['matchId'] ?? ''),
     ),
     GoRoute(
       path: '/predictions/me',
@@ -185,45 +167,33 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/chat/:roomId',
-      builder: (context, state) => ChatScreen(
-        roomId: state.pathParameters['roomId'] ?? 'general',
-      ),
+      builder: (context, state) =>
+          ChatScreen(roomId: state.pathParameters['roomId'] ?? 'general'),
     ),
-    GoRoute(
-      path: '/feed',
-      builder: (context, state) => const FeedScreen(),
-    ),
+    GoRoute(path: '/feed', builder: (context, state) => const FeedScreen()),
     GoRoute(
       path: '/create-post',
       builder: (context, state) => const CreatePostScreen(),
     ),
     GoRoute(
       path: '/post/:postId',
-      builder: (context, state) => PostDetailScreen(
-        postId: state.pathParameters['postId'] ?? '',
-      ),
+      builder: (context, state) =>
+          PostDetailScreen(postId: state.pathParameters['postId'] ?? ''),
     ),
-    GoRoute(
-      path: '/search',
-      builder: (context, state) => const SearchScreen(),
-    ),
+    GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
     ),
-    GoRoute(
-      path: '/badges',
-      builder: (context, state) => const BadgesScreen(),
-    ),
+    GoRoute(path: '/badges', builder: (context, state) => const BadgesScreen()),
     GoRoute(
       path: '/missions',
       builder: (context, state) => const MissionsScreen(),
     ),
     GoRoute(
       path: '/profile/:userId',
-      builder: (context, state) => PublicUserProfileScreen(
-        userId: state.pathParameters['userId'] ?? '',
-      ),
+      builder: (context, state) =>
+          PublicUserProfileScreen(userId: state.pathParameters['userId'] ?? ''),
     ),
     GoRoute(
       path: '/notifications',
@@ -248,14 +218,8 @@ final appRouter = GoRouter(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
     ),
-    GoRoute(
-      path: '/policy',
-      builder: (context, state) => const PolicyScreen(),
-    ),
-    GoRoute(
-      path: '/about',
-      builder: (context, state) => const AboutScreen(),
-    ),
+    GoRoute(path: '/policy', builder: (context, state) => const PolicyScreen()),
+    GoRoute(path: '/about', builder: (context, state) => const AboutScreen()),
     GoRoute(
       path: '/feedback',
       builder: (context, state) => const FeedbackScreen(),
@@ -267,6 +231,58 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/blocked-users',
       builder: (context, state) => const BlockedUsersScreen(),
+    ),
+    GoRoute(
+      path: '/training',
+      builder: (context, state) => const TrainingScreen(),
+    ),
+    GoRoute(
+      path: '/facilities',
+      builder: (context, state) => const FacilitiesScreen(),
+    ),
+    GoRoute(
+      path: '/transfers',
+      builder: (context, state) => const TransferMarketScreen(),
+    ),
+    GoRoute(
+      path: '/academy',
+      builder: (context, state) => const AcademyScreen(),
+    ),
+    GoRoute(path: '/museum', builder: (context, state) => const MuseumScreen()),
+    GoRoute(
+      path: '/associations',
+      builder: (context, state) => const AssociationScreen(),
+    ),
+    GoRoute(
+      path: '/sponsorships',
+      builder: (context, state) => const SponsorshipScreen(),
+    ),
+    GoRoute(
+      path: '/scenarios',
+      builder: (context, state) => const ScenarioScreen(),
+    ),
+    GoRoute(
+      path: '/match-simulation',
+      builder: (context, state) => MatchSimulationScreen(
+        homeLineupId: state.uri.queryParameters['homeLineupId'],
+        awayLineupId: state.uri.queryParameters['awayLineupId'],
+      ),
+    ),
+    GoRoute(
+      path: '/club-hub',
+      builder: (context, state) => const ClubHubScreen(),
+    ),
+    GoRoute(
+      path: '/squad-hub',
+      builder: (context, state) => const SquadHubScreen(),
+    ),
+    GoRoute(
+      path: '/transfer-hub',
+      builder: (context, state) => const TransferHubScreen(),
+    ),
+    GoRoute(
+      path: '/ai-assistant',
+      builder: (context, state) => const AiAssistantScreen(),
     ),
 
     // ADMIN ROUTES
@@ -290,13 +306,16 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/admin/matches/live/:matchId',
-      builder: (context, state) => AdminLiveMatchScreen(
-        matchId: state.pathParameters['matchId'] ?? '',
-      ),
+      builder: (context, state) =>
+          AdminLiveMatchScreen(matchId: state.pathParameters['matchId'] ?? ''),
     ),
     GoRoute(
       path: '/admin/players',
       builder: (context, state) => const AdminPlayersScreen(),
+    ),
+    GoRoute(
+      path: '/admin/quality',
+      builder: (context, state) => const AdminQualityScreen(),
     ),
     GoRoute(
       path: '/admin/lineups',
@@ -313,6 +332,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/admin/gamification',
       builder: (context, state) => const AdminGamificationScreen(),
+    ),
+    GoRoute(
+      path: '/admin/points',
+      builder: (context, state) => const AdminPointsScreen(),
     ),
     GoRoute(
       path: '/admin/reports',
@@ -345,6 +368,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/admin/audit-logs',
       builder: (context, state) => const AdminAuditLogsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/content',
+      builder: (context, state) => const AdminContentScreen(),
     ),
   ],
 );

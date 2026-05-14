@@ -11,14 +11,50 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
-    // Custom Claims-based role checks (no get() = no extra reads = lower cost)
+    function profileRole() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
     function isAdmin() {
-      return signedIn() && request.auth.token.role == 'admin';
+      return signedIn()
+        && (
+          request.auth.token.role == 'admin'
+          || request.auth.token.admin == true
+          || profileRole() == 'admin'
+        );
     }
 
 
     function isStaff() {
-      return signedIn() && request.auth.token.role in ['admin', 'moderator'];
+      return signedIn()
+        && (
+          request.auth.token.role in ['admin', 'moderator']
+          || request.auth.token.admin == true
+          || profileRole() in ['admin', 'moderator']
+        );
+    }
+
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function keepsProtectedGamificationFields() {
+      return request.resource.data.points == resource.data.points
+        && request.resource.data.badges == resource.data.badges
+        && request.resource.data.xp == resource.data.xp
+        && request.resource.data.level == resource.data.level
+        && request.resource.data.levelTitle == resource.data.levelTitle
+        && request.resource.data.badgesCount == resource.data.badgesCount
+        && request.resource.data.missionsCompleted == resource.data.missionsCompleted
+        && request.resource.data.coins == resource.data.coins
+        && request.resource.data.energy == resource.data.energy
+        && request.resource.data.managerXp == resource.data.managerXp
+        && request.resource.data.managerLevel == resource.data.managerLevel
+        && request.resource.data.seasonXp == resource.data.seasonXp
+        && request.resource.data.seasonPoints == resource.data.seasonPoints;
     }
 
 
@@ -28,21 +64,122 @@ service cloud.firestore {
       allow create: if isOwner(userId)
         && request.resource.data.role == 'user';
 
-      // Users cannot modify their own role, points, badges, or xp
+      // Trusted Backend Source of Truth: Economy, Level, and Progression fields CANNOT be updated by clients directly.
       allow update: if (
         isOwner(userId)
         && request.resource.data.role == resource.data.role
-        && request.resource.data.points == resource.data.points
-        && request.resource.data.badges == resource.data.badges
-        && request.resource.data.xp == resource.data.xp
+        && keepsProtectedGamificationFields()
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['moderationStrikes'])
+          || request.resource.data.moderationStrikes >= resource.data.moderationStrikes
+        )
+      ) || (
+        isOwner(userId)
+        && onlyChanged([
+          'hasClub',
+          'clubId',
+          'hasManagerMode',
+          'teamId',
+          'lastEnergyRefill',
+          'currentLoginStreak',
+          'bestLoginStreak',
+          'lastLoginRewardDate',
+          'lastActiveAt',
+          'gamificationEnabled',
+          'notificationPrefs',
+          'fcmToken',
+          'moderationStrikes',
+          'lastViolationDate'
+        ])
+        && keepsProtectedGamificationFields()
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['moderationStrikes'])
+          || request.resource.data.moderationStrikes >= resource.data.moderationStrikes
+        )
+      ) || (
+        signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followersCount'])
       ) || isStaff();
 
       allow delete: if isAdmin();
+
+      // Secured Subcollection for Private Info (Email, sensitive tokens, disabled status audit)
+      match /private/{docId} {
+        allow read, write: if isOwner(userId) || isStaff();
+      }
+
+      match /following/{targetId} {
+        allow read: if true;
+        allow write: if isOwner(userId);
+      }
+
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if signedIn() && request.auth.uid == followerId;
+      }
+
+      match /blockedUsers/{blockedId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow write: if isOwner(userId);
+      }
+
+      match /badges/{badgeId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow create, update: if isOwner(userId) || isStaff();
+        allow delete: if isStaff();
+      }
+
+      match /missions/{missionId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow create, update: if isOwner(userId) || isStaff();
+        allow delete: if isStaff();
+      }
+
+      match /xpEvents/{eventId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow create: if isStaff();
+        allow update, delete: if isStaff();
+      }
+
+      match /streaks/{streakId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow create, update: if isOwner(userId) || isStaff();
+        allow delete: if isStaff();
+      }
+
+      match /seasonStats/{statId} {
+        allow read: if isOwner(userId) || isStaff();
+        allow create, update: if isOwner(userId) || isStaff();
+        allow delete: if isStaff();
+      }
+    }
+
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow create: if isOwner(clubId);
+      allow update: if isOwner(clubId) || isStaff();
+      allow delete: if isAdmin();
+
+      match /academy/{playerIndex} {
+        allow read: if true;
+        allow write: if isOwner(clubId) || isStaff();
+      }
     }
 
     match /matches/{matchId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /events/{eventId} {
+        allow read: if true;
+        allow write: if isStaff();
+      }
+
+      match /motmVotes/{userId} {
+        allow read: if true;
+        allow create: if isOwner(userId);
+        allow update, delete: if isStaff();
+      }
     }
 
     match /lineups/{lineupId} {
@@ -54,6 +191,9 @@ service cloud.firestore {
       allow update, delete: if (
         signedIn()
         && resource.data.userId == request.auth.uid
+      ) || (
+        signedIn()
+        && onlyChanged(['likes', 'commentsCount'])
       ) || isStaff();
 
       match /likes/{userId} {
@@ -75,11 +215,15 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        || isStaff();
 
       allow update, delete: if (
         signedIn()
         && resource.data.userId == request.auth.uid
+      ) || (
+        signedIn()
+        && onlyChanged(['likes', 'commentsCount'])
       ) || isStaff();
 
       match /comments/{commentId} {
@@ -92,6 +236,16 @@ service cloud.firestore {
           signedIn()
           && resource.data.userId == request.auth.uid
         ) || isStaff();
+      }
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.userId == request.auth.uid;
+        allow delete: if signedIn()
+          && request.auth.uid == userId;
+        allow update: if false;
       }
     }
 
@@ -109,8 +263,11 @@ service cloud.firestore {
 
     match /chatRooms/{roomId} {
       allow read: if true;
-      allow create: if signedIn()
-        && request.resource.data.createdBy == request.auth.uid;
+      allow create: if isStaff()
+        || (
+          signedIn()
+          && request.resource.data.createdBy == request.auth.uid
+        );
       allow update, delete: if isStaff()
         || (
           signedIn()
@@ -148,8 +305,15 @@ service cloud.firestore {
     }
 
     match /auditLogs/{logId} {
-      allow read, create: if isStaff();
-      allow update, delete: if isAdmin();
+      // Mandatory Backend Enforced writes: clients cannot write to audit logs directly. Admin SDK bypasses rules entirely.
+      allow read: if isStaff();
+      allow write: if false;
+    }
+
+    match /moderationLogs/{logId} {
+      // Clients can only submit their own infraction trail records
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
     }
 
     match /feedback/{feedbackId} {
@@ -158,6 +322,11 @@ service cloud.firestore {
     }
 
     match /appSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /appContent/{contentId} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -180,7 +349,22 @@ service cloud.firestore {
 
     match /players/{playerId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.ownerId == request.auth.uid
+        );
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId
+        );
+      allow delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerId == request.auth.uid
+        );
     }
 
     match /questions/{questionId} {
@@ -190,6 +374,26 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['answers', 'respondents']);
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /missions/{missionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /seasons/{seasonId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gamificationRules/{ruleId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

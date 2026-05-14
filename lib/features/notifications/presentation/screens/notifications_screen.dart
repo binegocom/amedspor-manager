@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/navigation_helpers.dart';
 
 import '../../../../data/models/notification_model.dart';
 import '../../../../data/repositories/notification_repository.dart';
@@ -82,8 +83,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Column(
           children: [
             _Header(
-              onBack: () => context.go('/profile'),
-              onSettings: () => context.go('/settings'),
+              onBack: () => context.popOrGo('/profile'),
+              onSettings: () => context.push('/settings'),
             ),
 
             SizedBox(

@@ -1,0 +1,1 @@
+# Deprecated root script. Preserved Dart code in tools/movement_system.dart.

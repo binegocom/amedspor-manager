@@ -14,6 +14,7 @@ class MatchModel {
   final List<String> motmCandidates;
   final bool isMotmVotingActive;
   final Map<String, int> motmResults;
+  final int hypeScore; // Digital Tribune Hype Meter
 
   bool get isLive => status == 'live' || status == 'halftime';
   bool get isFinished => status == 'finished';
@@ -32,6 +33,7 @@ class MatchModel {
     this.motmCandidates = const [],
     this.isMotmVotingActive = false,
     this.motmResults = const {},
+    this.hypeScore = 0,
   });
 
   factory MatchModel.fromFirestore(DocumentSnapshot doc) {
@@ -54,6 +56,7 @@ class MatchModel {
       motmCandidates: List<String>.from(map['motmCandidates'] ?? []),
       isMotmVotingActive: map['isMotmVotingActive'] ?? false,
       motmResults: Map<String, int>.from(map['motmResults'] ?? {}),
+      hypeScore: map['hypeScore'] ?? 0,
     );
   }
 
@@ -71,6 +74,7 @@ class MatchModel {
       'motmCandidates': motmCandidates,
       'isMotmVotingActive': isMotmVotingActive,
       'motmResults': motmResults,
+      'hypeScore': hypeScore,
     };
   }
 

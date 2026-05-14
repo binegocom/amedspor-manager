@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/match_model.dart';
 import '../models/match_event_model.dart';
 import '../services/firebase/firebase_providers.dart';
@@ -126,4 +127,15 @@ class MatchRepository {
   Future<void> deleteMatch(String matchId) async {
     await _firestore.collection('matches').doc(matchId).delete();
   }
+
+  Future<void> incrementHypeScore(String matchId, int amount) async {
+    await _firestore.collection('matches').doc(matchId).update({
+      'hypeScore': FieldValue.increment(amount),
+    });
+  }
 }
+
+// Tüm uygulamada kullanılacak tekil ve önbelleklenmiş maçlar akışı
+final matchesStreamProvider = StreamProvider.autoDispose<List<MatchModel>>((ref) {
+  return MatchRepository().watchMatches();
+});

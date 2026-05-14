@@ -16,7 +16,8 @@ import '../../../../data/repositories/post_repository.dart';
 import '../../../../data/services/firebase/firebase_providers.dart';
 import '../../../../shared/components/login_required_modal.dart';
 import 'lineup_rating_result_screen.dart';
-import '../../../../core/gamification/gamification_service.dart';
+import '../../../../data/services/gamification_service.dart';
+import '../../../../data/services/ai_tactical_service.dart';
 
 class LineupBuilderScreen extends StatefulWidget {
   final String matchId;
@@ -37,10 +38,14 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
   final playerRepository = PlayerRepository();
   final postRepository = PostRepository();
   final uuid = const Uuid();
+  final aiTacticalService = AiTacticalService();
 
   String selectedFormation = '4-3-3';
+  String selectedPhilosophy = 'Gegenpressing'; // Yeni Felsefe Özelliği
   String? captainName;
   bool isSaving = false;
+  bool isAiAnalyzing = false;
+  int remainingAiTokens = 0;
 
   final List<String> formations = const [
     '4-3-3',
@@ -50,6 +55,12 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
     '3-4-3',
     '5-4-1',
     '4-1-2-1-2',
+  ];
+
+  final List<String> philosophies = const [
+    'Gegenpressing',
+    'Tiki-Taka',
+    'Catenaccio',
   ];
 
   final List<_Player> players = [
@@ -71,10 +82,30 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
   int get lineupPower {
     final formationBonus = selectedFormation == '4-3-3' ? 8 : 5;
     final captainBonus = captainName == null ? 0 : 12;
+    // Felsefeye göre dinamik OVR bonusu
+    int philosophyBonus = 4;
+    if (selectedPhilosophy == 'Tiki-Taka') philosophyBonus = 3;
+    if (selectedPhilosophy == 'Catenaccio') philosophyBonus = 5;
+
     final ratingSum = players.fold<int>(0, (acc, p) => acc + p.rating);
     final ratingAverage = ratingSum / players.length;
 
-    return (ratingAverage + formationBonus + captainBonus).round().clamp(0, 100);
+    return (ratingAverage + formationBonus + captainBonus + philosophyBonus).round().clamp(0, 100);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAiTokens();
+  }
+
+  Future<void> _loadAiTokens() async {
+    final tokens = await aiTacticalService.getRemainingTokens();
+    if (mounted) {
+      setState(() {
+        remainingAiTokens = tokens;
+      });
+    }
   }
 
   void _changeFormation(String formation) {
@@ -122,6 +153,86 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
     });
   }
 
+  Future<void> _autoFillWithOptimalAI() async {
+    setState(() => isAiAnalyzing = true);
+
+    try {
+      // 1. Veritabanındaki tüm aktif oyuncuları çek
+      final snap = await firestoreService.players.where('active', isEqualTo: true).get();
+      final allPlayers = snap.docs.map((d) => PlayerModel.fromMap(d.id, d.data())).toList();
+
+      // 2. İsim bazlı tekilleştir (en yüksek reytingli olanı sakla)
+      final uniqueMap = <String, PlayerModel>{};
+      for (final p in allPlayers) {
+        if (!p.injured && !p.suspended) {
+          if (!uniqueMap.containsKey(p.name) || uniqueMap[p.name]!.rating < p.rating) {
+            uniqueMap[p.name] = p;
+          }
+        }
+      }
+
+      final pool = uniqueMap.values.toList()..sort((a, b) => b.rating.compareTo(a.rating));
+
+      if (pool.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kadro havuzunda aktif ve uygun oyuncu bulunamadı.')),
+        );
+        return;
+      }
+
+      // 3. Sahadaki pozisyonlara en uygun oyuncuyu ata
+      final usedNames = <String>{};
+      PlayerModel? highestRatedPlayer;
+
+      for (int i = 0; i < players.length; i++) {
+        final posTarget = players[i].position; // 'GK', 'DEF', 'MID', 'FWD'
+        PlayerModel? candidate;
+        
+        try {
+          candidate = pool.firstWhere((p) => p.position == posTarget && !usedNames.contains(p.name));
+        } catch (_) {
+          // Eğer tam o pozisyondan kalmadıysa herhangi bir en yüksek reytingliyi (joker) koy
+          try {
+            candidate = pool.firstWhere((p) => !usedNames.contains(p.name));
+          } catch (_) {}
+        }
+
+        if (candidate != null) {
+          usedNames.add(candidate.name);
+          players[i] = players[i].copyWith(
+            id: candidate.id,
+            name: candidate.name,
+            rating: candidate.rating,
+            number: candidate.number,
+          );
+
+          if (highestRatedPlayer == null || candidate.rating > highestRatedPlayer.rating) {
+            highestRatedPlayer = candidate;
+          }
+        }
+      }
+
+      // Kaptanlığı en yüksek reytingli oyuncuya ata
+      if (highestRatedPlayer != null) {
+        captainName = highestRatedPlayer.name;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.gold,
+          content: Text('✨ AI Danışman sahaya en uyumlu ve yüksek reytingli 11 oyuncuyu yerleştirdi!'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI Doldurma Hatası: $e')));
+    } finally {
+      if (mounted) setState(() => isAiAnalyzing = false);
+    }
+  }
+
   void _openPlayerSheet(int? index, {bool isSub = false}) {
     showModalBottomSheet(
       context: context,
@@ -143,9 +254,20 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
               stream: playerRepository.watchActivePlayers(),
               builder: (context, snapshot) {
                 final allPlayers = snapshot.data ?? [];
+                
+                // Aynı isimdeki tekrarlanan oyuncuları filtrele (sadece benzersiz olanları göster)
+                final seenNames = <String>{};
+                final uniquePlayers = <PlayerModel>[];
+                for (final p in allPlayers) {
+                  if (!seenNames.contains(p.name)) {
+                    seenNames.add(p.name);
+                    uniquePlayers.add(p);
+                  }
+                }
+
                 final filteredPlayers = selectedPosition == 'ALL' 
-                    ? allPlayers 
-                    : allPlayers.where((player) => player.position == selectedPosition).toList();
+                    ? uniquePlayers 
+                    : uniquePlayers.where((player) => player.position == selectedPosition).toList();
 
                 return Column(
                   children: [
@@ -172,13 +294,17 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                                 final isInLineup = players.any((p) => p.name == player.name) || 
                                                   substitutes.any((p) => p.name == player.name);
 
+                                final isUnavailable = player.injured || player.suspended;
+                                final isDisabled = isInLineup || isUnavailable;
+
                                 return Opacity(
-                                  opacity: isInLineup ? 0.5 : 1.0,
+                                  opacity: isDisabled ? 0.5 : 1.0,
                                   child: PremiumCard(
-                                    onTap: isInLineup ? null : () {
+                                    onTap: isDisabled ? null : () {
                                       setState(() {
                                         if (isSub) {
                                           substitutes.add(_Player(
+                                            id: player.id,
                                             name: player.name,
                                             position: player.position,
                                             rating: player.rating,
@@ -188,6 +314,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                                           ));
                                         } else if (index != null) {
                                           players[index] = players[index].copyWith(
+                                            id: player.id,
                                             name: player.name,
                                             rating: player.rating,
                                             number: player.number,
@@ -214,6 +341,10 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                                             children: [
                                               Text(player.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                               Text('${player.position} • GÜÇ: ${player.rating}', style: AppTextStyles.label),
+                                              if (player.injured)
+                                                const Text('SAKAT', style: TextStyle(color: AppColors.primaryRed, fontSize: 10, fontWeight: FontWeight.bold)),
+                                              if (player.suspended)
+                                                const Text('CEZALI', style: TextStyle(color: AppColors.primaryRed, fontSize: 10, fontWeight: FontWeight.bold)),
                                             ],
                                           ),
                                         ),
@@ -253,6 +384,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
         userId: user.uid,
         matchId: widget.matchId,
         formation: selectedFormation,
+        philosophy: selectedPhilosophy,
         players: players.map((p) => p.toMap()).toList(),
         substitutes: substitutes.map((p) => p.toMap()).toList(),
         likes: 0,
@@ -305,6 +437,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
         userId: user.uid,
         matchId: widget.matchId,
         formation: selectedFormation,
+        philosophy: selectedPhilosophy,
         players: players.map((p) => p.toMap()).toList(),
         substitutes: substitutes.map((p) => p.toMap()).toList(),
         likes: 0,
@@ -319,7 +452,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
         id: uuid.v4(),
         userId: user.uid,
         username: user.email ?? 'Taraftar',
-        title: 'Benim $selectedFormation Kadrom',
+        title: 'Benim $selectedFormation ($selectedPhilosophy) Kadrom',
         content: 'Yeni kadromu kurdum! Güç: $lineupPower. Sen de gel kadronu kur!',
         category: 'Kadro',
         likes: 0,
@@ -349,77 +482,302 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
     }
   }
 
+  Future<void> _requestAiAdvice() async {
+    final user = authService.currentUser;
+    if (user == null) {
+      showLoginRequiredModal(context);
+      return;
+    }
+
+    final selectedCount = players.where((p) => p.name != 'OYUNCU SEÇ').length;
+    if (selectedCount < 7) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI analizi için en az 7 oyuncu seçmelisiniz.')),
+      );
+      return;
+    }
+
+    if (remainingAiTokens <= 0) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Jeton Kalmadı', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Günlük ücretsiz AI analiz hakkınız doldu.\n250 XP harcayarak yeni bir Taktiksel Danışmanlık Jetonu almak ister misiniz?',
+            style: TextStyle(color: AppColors.muted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('İPTAL', style: TextStyle(color: AppColors.muted)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('XP HARCA', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      setState(() => isAiAnalyzing = true);
+      final success = await aiTacticalService.buyTokenWithXp();
+      if (!success) {
+        setState(() => isAiAnalyzing = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Yetersiz XP! Jeton almak için daha fazla XP biriktirmelisiniz.')),
+          );
+        }
+        return;
+      }
+
+      await _loadAiTokens();
+    } else {
+      setState(() => isAiAnalyzing = true);
+      await aiTacticalService.consumeToken();
+      await _loadAiTokens();
+    }
+
+    final report = await aiTacticalService.synthesizeAdvice(
+      selectedFormation,
+      lineupPower,
+      captainName,
+    );
+
+    setState(() => isAiAnalyzing = false);
+
+    if (mounted) {
+      _showAiReportModal(report);
+    }
+  }
+
+  void _showAiReportModal(String report) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.psychology, color: AppColors.gold, size: 28),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('AI Taktiksel Danışman', style: TextStyle(color: AppColors.gold, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Genkit / Gemini Sentezi', style: TextStyle(color: AppColors.muted, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.muted),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
+              child: SingleChildScrollView(
+                child: Text(
+                  report,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                text: 'ANLADIM, TALİMATLARI UYGULA',
+                onTap: () => Navigator.pop(ctx),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const PremiumHeader(title: 'KADRO KUR', showBackButton: true),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: _StatusCard(power: lineupPower, captain: captainName, players: players),
-            ),
-            SizedBox(
-              height: 48,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                scrollDirection: Axis.horizontal,
-                itemCount: formations.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final formation = formations[index];
-                  final active = selectedFormation == formation;
-                  return GestureDetector(
-                    onTap: () => _changeFormation(formation),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: active ? AppColors.primaryGreen : AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: active ? AppColors.primaryGreen : AppColors.white.withValues(alpha: 0.05)),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.tacticalBlueprintGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const PremiumHeader(title: 'KADRO KUR', showBackButton: true),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: _StatusCard(
+                  power: lineupPower,
+                  captain: captainName,
+                  players: players,
+                  philosophy: selectedPhilosophy,
+                  remainingAiTokens: remainingAiTokens,
+                  isAiAnalyzing: isAiAnalyzing,
+                  onAiAdvisorTap: _requestAiAdvice,
+                ),
+              ),
+              
+              // Formasyon Çubuğu
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: formations.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final formation = formations[index];
+                    final active = selectedFormation == formation;
+                    return GestureDetector(
+                      onTap: () => _changeFormation(formation),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: active ? AppColors.primaryGreen : AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: active ? AppColors.primaryGreen : AppColors.white.withValues(alpha: 0.05)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(formation, style: TextStyle(color: active ? Colors.white : AppColors.muted, fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(formation, style: TextStyle(color: active ? Colors.white : AppColors.muted, fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _PitchView(
-                players: players,
-                captainName: captainName,
-                onPlayerTap: (idx) => _openPlayerSheet(idx),
-                onCaptainSet: (name) => setState(() => captainName = name),
-              ),
-            ),
-            _buildSubstitutesBench(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      text: 'PAYLAŞ',
-                      type: AppButtonType.secondary,
-                      onTap: _shareLineup,
+              const SizedBox(height: 8),
+
+              // Felsefe Çubuğu
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    const Icon(Icons.shield_rounded, color: AppColors.gold, size: 14),
+                    const SizedBox(width: 6),
+                    const Text('FELSEFE:', style: TextStyle(color: AppColors.gold, fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 32,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: philosophies.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 6),
+                          itemBuilder: (context, index) {
+                            final phil = philosophies[index];
+                            final active = selectedPhilosophy == phil;
+                            String bonusText = '+4 OVR';
+                            if (phil == 'Tiki-Taka') bonusText = '+3 OVR';
+                            if (phil == 'Catenaccio') bonusText = '+5 OVR';
+
+                            return GestureDetector(
+                              onTap: () => setState(() => selectedPhilosophy = phil),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: active ? AppColors.gold.withValues(alpha: 0.18) : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: active ? AppColors.gold : Colors.white12),
+                                ),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  children: [
+                                    Text(phil, style: TextStyle(color: active ? AppColors.gold : AppColors.muted, fontWeight: FontWeight.bold, fontSize: 10)),
+                                    const SizedBox(width: 4),
+                                    Text(bonusText, style: TextStyle(color: active ? Colors.white : Colors.white54, fontSize: 8)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppButton(
-                      text: 'KAYDET',
-                      isLoading: isSaving,
-                      onTap: _saveLineup,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+
+              // ✨ AI Otomatik Optimum Kadro Butonu
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: AppButton(
+                  text: '✨ AI OPTİMUM YERLEŞTİR',
+                  color: AppColors.gold,
+                  textColor: Colors.black,
+                  height: 34,
+                  isLoading: isAiAnalyzing,
+                  onTap: _autoFillWithOptimalAI,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Expanded(
+                child: _PitchView(
+                  players: players,
+                  captainName: captainName,
+                  onPlayerTap: (idx) => _openPlayerSheet(idx),
+                  onCaptainSet: (name) => setState(() => captainName = name),
+                ),
+              ),
+              _buildSubstitutesBench(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppButton(
+                        text: 'PAYLAŞ',
+                        type: AppButtonType.secondary,
+                        height: 38,
+                        onTap: _shareLineup,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppButton(
+                        text: 'KAYDET',
+                        height: 38,
+                        isLoading: isSaving,
+                        onTap: _saveLineup,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -430,13 +788,13 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'YEDEK KULÜBESİ (${substitutes.length})',
-                style: const TextStyle(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1),
+                style: const TextStyle(color: AppColors.gold, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
               ),
               if (substitutes.length < 12)
                 GestureDetector(
@@ -461,8 +819,8 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
           ),
         ),
         Container(
-          height: 100,
-          margin: const EdgeInsets.only(bottom: 8),
+          height: 80,
+          margin: const EdgeInsets.only(bottom: 4),
           child: substitutes.isEmpty
               ? Center(
                   child: Text(
@@ -486,7 +844,7 @@ class _LineupBuilderScreenState extends State<LineupBuilderScreen> {
                               isCaptain: false,
                               position: p.position,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             _PlayerLabel(name: p.name, rating: p.rating),
                           ],
                         ),
@@ -516,63 +874,125 @@ class _StatusCard extends StatelessWidget {
   final int power;
   final String? captain;
   final List<_Player> players;
+  final String philosophy;
+  final int remainingAiTokens;
+  final bool isAiAnalyzing;
+  final VoidCallback? onAiAdvisorTap;
 
   const _StatusCard({
     required this.power,
     required this.captain,
     required this.players,
+    required this.philosophy,
+    this.remainingAiTokens = 0,
+    this.isAiAnalyzing = false,
+    this.onAiAdvisorTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Calculate sector scores
     final defScore = _calculateSector(players, 'DEF') + _calculateSector(players, 'GK');
     final midScore = _calculateSector(players, 'MID');
     final fwdScore = _calculateSector(players, 'FWD');
 
     return PremiumCard(
       backgroundColor: AppColors.surface,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Row(
             children: [
               _buildPowerBadge(power),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'KADRO ANALİZİ',
-                      style: TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 10,
+                    Text(
+                      'KADRO KİMYASI: ${philosophy.toUpperCase()}',
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 9,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
+                        letterSpacing: 1.0,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       captain != null ? 'Kaptan: $captain' : 'Kaptan Seçilmedi',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
+              GestureDetector(
+                onTap: isAiAnalyzing ? null : onAiAdvisorTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: remainingAiTokens > 0 
+                          ? [AppColors.gold, const Color(0xFFFFB300)]
+                          : [AppColors.card, AppColors.surface],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: remainingAiTokens > 0 ? AppColors.gold : AppColors.muted.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: isAiAnalyzing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.psychology,
+                              color: remainingAiTokens > 0 ? Colors.black : AppColors.muted,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'AI DANIŞMAN',
+                                  style: TextStyle(
+                                    color: remainingAiTokens > 0 ? Colors.black : AppColors.muted,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                Text(
+                                  remainingAiTokens > 0 ? '$remainingAiTokens ÜCRETSİZ' : 'XP İLE AL',
+                                  style: TextStyle(
+                                    color: remainingAiTokens > 0 ? Colors.black87 : AppColors.muted.withValues(alpha: 0.7),
+                                    fontSize: 7,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Row(
             children: [
               _AnalysisBar(label: 'SAVUNMA', score: defScore, color: const Color(0xFF2196F3)),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _AnalysisBar(label: 'ORTA SAHA', score: midScore, color: const Color(0xFF4CAF50)),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _AnalysisBar(label: 'HÜCUM', score: fwdScore, color: const Color(0xFFE53935)),
             ],
           ),
@@ -590,12 +1010,12 @@ class _StatusCard extends StatelessWidget {
 
   Widget _buildPowerBadge(int power) {
     return Container(
-      width: 64,
-      height: 64,
+      width: 54,
+      height: 54,
       decoration: BoxDecoration(
         color: AppColors.primaryGreen.withValues(alpha: 0.1),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3), width: 2),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Center(
         child: Column(
@@ -605,7 +1025,7 @@ class _StatusCard extends StatelessWidget {
               '$power',
               style: const TextStyle(
                 color: AppColors.primaryGreen,
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -613,7 +1033,7 @@ class _StatusCard extends StatelessWidget {
               'GÜÇ',
               style: TextStyle(
                 color: AppColors.primaryGreen,
-                fontSize: 8,
+                fontSize: 7,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -646,16 +1066,16 @@ class _AnalysisBar extends StatelessWidget {
               ),
               Text(
                 '$score',
-                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900),
+                style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: score / 100,
-              minHeight: 4,
+              minHeight: 3,
               backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
@@ -688,7 +1108,6 @@ class _PitchView extends StatelessWidget {
 
         return Stack(
           children: [
-            // Atmosphere effects (Stadium lights glow)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -704,12 +1123,11 @@ class _PitchView extends StatelessWidget {
               ),
             ),
             
-            // 3D Perspective Transform
             Center(
               child: Transform(
                 transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001) // perspective
-                  ..rotateX(0.1), // tilt
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateX(0.1),
                 alignment: FractionalOffset.center,
                 child: Container(
                   width: pitchWidth * 0.95,
@@ -738,8 +1156,8 @@ class _PitchView extends StatelessWidget {
                           return AnimatedPositioned(
                             duration: const Duration(milliseconds: 700),
                             curve: Curves.easeInOutCubic,
-                            top: p.top * pitchHeight - 40,
-                            left: p.left * pitchWidth - 35,
+                            top: p.top * pitchHeight - 35,
+                            left: p.left * pitchWidth - 30,
                             child: GestureDetector(
                               onTap: () => onPlayerTap(idx),
                               onLongPress: () {
@@ -754,7 +1172,7 @@ class _PitchView extends StatelessWidget {
                                     isCaptain: isCaptain,
                                     position: p.position,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   _PlayerLabel(name: p.name, rating: p.rating),
                                 ],
                               ),
@@ -792,17 +1210,15 @@ class _ProJersey extends StatelessWidget {
     final Color stripeColor = isGK ? const Color(0xFF111111) : const Color(0xFF0F6A3D);
 
     return SizedBox(
-      width: 60,
-      height: 60,
+      width: 50,
+      height: 50,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Jersey Shape Shadow
           CustomPaint(
-            size: const Size(54, 54),
+            size: const Size(46, 46),
             painter: _JerseyPainter(color: Colors.black.withValues(alpha: 0.3)),
           ),
-          // Actual Jersey
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
             duration: const Duration(milliseconds: 500),
@@ -810,7 +1226,7 @@ class _ProJersey extends StatelessWidget {
               return Transform.scale(
                 scale: value,
                 child: CustomPaint(
-                  size: const Size(50, 50),
+                  size: const Size(42, 42),
                   painter: _JerseyPainter(
                     color: primaryColor,
                     stripeColor: stripeColor,
@@ -820,15 +1236,14 @@ class _ProJersey extends StatelessWidget {
               );
             },
           ),
-          // Number
           Positioned(
-            top: 14,
+            top: 12,
             child: Text(
               number > 0 ? '$number' : '?',
               style: TextStyle(
                 color: isGK ? Colors.black : Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 16,
+                fontSize: 14,
                 shadows: [
                   Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 2),
                 ],
@@ -838,7 +1253,7 @@ class _ProJersey extends StatelessWidget {
           if (isCaptain)
             Positioned(
               right: 2,
-              top: 10,
+              top: 8,
               child: Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
@@ -846,7 +1261,7 @@ class _ProJersey extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                 ),
-                child: const Text('C', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
+                child: const Text('C', style: TextStyle(color: Colors.black, fontSize: 7, fontWeight: FontWeight.bold)),
               ),
             ),
         ],
@@ -867,14 +1282,12 @@ class _JerseyPainter extends CustomPainter {
     final paint = Paint()..color = color..style = PaintingStyle.fill;
     final path = Path();
 
-    // Body
     path.moveTo(size.width * 0.2, size.height * 0.1);
     path.lineTo(size.width * 0.8, size.height * 0.1);
     path.lineTo(size.width * 0.8, size.height * 0.9);
     path.lineTo(size.width * 0.2, size.height * 0.9);
     path.close();
 
-    // Sleeves
     path.moveTo(size.width * 0.2, size.height * 0.1);
     path.lineTo(0, size.height * 0.3);
     path.lineTo(size.width * 0.15, size.height * 0.45);
@@ -892,7 +1305,6 @@ class _JerseyPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(size.width * 0.4, size.height * 0.1, size.width * 0.2, size.height * 0.8), sPaint);
     }
 
-    // Border
     final bPaint = Paint()..color = Colors.white.withValues(alpha: 0.2)..style = PaintingStyle.stroke..strokeWidth = 1;
     canvas.drawPath(path, bPaint);
   }
@@ -910,7 +1322,7 @@ class _PlayerLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(4),
@@ -920,17 +1332,17 @@ class _PlayerLabel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
             decoration: BoxDecoration(
               color: rating > 80 ? AppColors.gold : (rating > 70 ? AppColors.primaryGreen : AppColors.muted),
               borderRadius: BorderRadius.circular(2),
             ),
-            child: Text('$rating', style: const TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
+            child: Text('$rating', style: const TextStyle(color: Colors.black, fontSize: 7, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3),
           Text(
             name.length > 10 ? '${name.substring(0, 8)}..' : name,
-            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -943,12 +1355,11 @@ class _ProPitchPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      ..strokeWidth = 1.5
       ..color = Colors.white.withValues(alpha: 0.3);
 
     final grassPaint = Paint()..style = PaintingStyle.fill;
 
-    // Draw grass stripes with 3D depth feeling
     const stripes = 12;
     final stripeHeight = size.height / stripes;
     for (var i = 0; i < stripes; i++) {
@@ -958,18 +1369,14 @@ class _ProPitchPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(0, i * stripeHeight, size.width, stripeHeight), grassPaint);
     }
 
-    // Outer border
     canvas.drawRect(Rect.fromLTWH(5, 5, size.width - 10, size.height - 10), paint);
 
-    // Center line and circle
     canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), 70, paint);
+    canvas.drawCircle(Offset(size.width / 2, size.height / 2), 60, paint);
 
-    // Goal areas
-    _drawPenaltyArea(canvas, size, paint, true); // Top
-    _drawPenaltyArea(canvas, size, paint, false); // Bottom
+    _drawPenaltyArea(canvas, size, paint, true);
+    _drawPenaltyArea(canvas, size, paint, false);
 
-    // Corner arcs
     canvas.drawArc(Rect.fromLTWH(-15, -15, 30, 30), 0, 1.5, false, paint);
     canvas.drawArc(Rect.fromLTWH(size.width - 15, -15, 30, 30), 1.5, 1.5, false, paint);
   }
@@ -994,6 +1401,7 @@ class _ProPitchPainter extends CustomPainter {
 }
 
 class _Player {
+  final String? id;
   final String name;
   final String position;
   final double top;
@@ -1002,6 +1410,7 @@ class _Player {
   final int number;
 
   _Player({
+    this.id,
     required this.name,
     required this.position,
     required this.top,
@@ -1011,6 +1420,7 @@ class _Player {
   });
 
   _Player copyWith({
+    String? id,
     String? name,
     String? position,
     double? top,
@@ -1019,6 +1429,7 @@ class _Player {
     int? number,
   }) {
     return _Player(
+      id: id ?? this.id,
       name: name ?? this.name,
       position: position ?? this.position,
       top: top ?? this.top,
@@ -1030,6 +1441,7 @@ class _Player {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'name': name,
       'position': position,
       'top': top,
